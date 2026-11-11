@@ -599,9 +599,52 @@ private fun showGroupReportDetailsWithName(
                                     "repliedAt" to
                                         com.google.firebase.firestore.FieldValue.serverTimestamp()
                                 )
-                            ).addOnSuccessListener {
+                                                        ).addOnSuccessListener {
+
                                 toast("Admin Reply सेव हो गया")
-                                showGroupReportsManager()
+
+                                androidx.appcompat.app.AlertDialog.Builder(this)
+                                    .setTitle("👥 ग्रुप में भी साझा करें?")
+                                    .setMessage(
+                                        "क्या आप केवल अपना Admin जवाब " +
+                                        "ग्रुप में भी साझा करना चाहते हैं?\n\n" +
+                                        "शिकायत और शिकायतकर्ता का नाम " +
+                                        "सार्वजनिक नहीं किया जाएगा।\n\n" +
+                                        "ग्रुप में भेजा गया जवाब पहले Pending रहेगा।"
+                                    )
+                                    .setPositiveButton("ग्रुप में साझा करें") { _, _ ->
+
+                                        val publicBody =
+                                            "📢 Shiksha Rojgar Admin की ओर से जवाब:\n\n" +
+                                            answer
+
+                                        GroupRepository.submitPost(
+                                            displayName = "Shiksha Rojgar Admin",
+                                            body = publicBody
+                                        ) { success, error ->
+
+                                            runOnUiThread {
+
+                                                if (success) {
+                                                    toast(
+                                                        "जवाब ग्रुप में Pending पोस्ट के रूप में भेज दिया गया।"
+                                                    )
+                                                } else {
+                                                    toast(
+                                                        "ग्रुप में साझा नहीं हुआ: " +
+                                                        (error ?: "अज्ञात त्रुटि")
+                                                    )
+                                                }
+
+                                                showGroupReportsManager()
+                                            }
+                                        }
+                                    }
+                                    .setNegativeButton("अभी नहीं") { _, _ ->
+                                        showGroupReportsManager()
+                                    }
+                                    .show()
+
                             }.addOnFailureListener {
                                 toast("Reply सेव नहीं हुआ: ${it.localizedMessage}")
                             }
