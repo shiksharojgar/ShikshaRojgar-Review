@@ -3932,74 +3932,188 @@ val localContactNames =
     )
 }
 
-    summary.text =
-        "ऐप इंस्टॉलेशन, Login और प्रोफाइल रिकॉर्ड पढ़े जा रहे हैं..."
+    
+    summary.text = "पंजीकृत यूज़र और चैनल फॉलो जानकारी लोड हो रही है..."
 
-    // पहले सभी प्रोफाइल पढ़ें।
+    // 1. यूज़र सूची सीधे group_profiles से बनेगी।
     db.collection("group_profiles")
         .get()
         .addOnSuccessListener { profiles ->
 
             if (isFinishing || isDestroyed) return@addOnSuccessListener
 
-            // फोन में ऐप खुलने के रिकॉर्ड।
-            db.collection("app_installs")
+            // 2. चैनल फॉलो करने वालों की सूची।
+            db.collection("channel_followers")
                 .get()
-                .addOnSuccessListener { installs ->
+                .addOnSuccessListener { followers ->
 
                     if (isFinishing || isDestroyed) return@addOnSuccessListener
 
-                    // Login अकाउंट और इंस्टॉलेशन का संबंध।
-                    db.collection("app_install_accounts")
+                    val followerIds =
+                        followers.documents.map { it.id }.toSet()
+
+                    val profileDocs =
+                        profiles.documents.sortedBy {
+                            it.getString("displayName").orEmpty()
+                        }
+
+                    val registeredCount = profileDocs.size
+
+                    val followerCount =
+                        profileDocs.count { it.id in followerIds }
+
+                    // पहले प्रोफाइल की जानकारी दिखाएँ।
+                    summary.text =
+                        "📋 पंजीकृत प्रोफाइल: $registeredCount\n\n" +
+                        "🔔 चैनल फॉलो करने वाले प्रोफाइल: $followerCount\n\n" +
+                        "📱 इंस्टॉल की जानकारी लोड हो रही है..."
+
+                    userList.removeAllViews()
+
+                    if (profileDocs.isEmpty()) {
+                        userList.addView(
+                            TextView(this).apply {
+                                text = "अभी कोई पंजीकृत यूज़र नहीं मिला।"
+                                textSize = 14f
+                                setPadding(0, dp(16), 0, dp(16))
+                            }
+                        )
+                    }
+
+                    // 3. हर कार्ड सीधे group_profiles से बनेगा।
+                    profileDocs.forEach { profile ->
+
+                        val username =
+                            profile.getString("displayName")
+                                ?.takeIf { it.isNotBlank() }
+                                ?: "नाम उपलब्ध नहीं"
+
+                        val email =
+                            profile.getString("email")
+                                ?: "ईमेल उपलब्ध नहीं"
+
+                        val mobile =
+                            profile.getString("mobileNumber")
+                                ?: "मोबाइल उपलब्ध नहीं"
+
+                        val normalizedMobile =
+                            mobile.filter { it.isDigit() }.takeLast(10)
+
+                        val savedContactName =
+                            localContactNames[normalizedMobile]
+
+                        val following =
+                            profile.id in followerIds
+
+                        val card = LinearLayout(this).apply {
+                            orientation = LinearLayout.VERTICAL
+                            setPadding(
+                                dp(10),
+                                dp(10),
+                                dp(10),
+                                dp(10)
+                            )
+                            background =
+                                android.graphics.drawable.GradientDrawable().apply {
+                                    setColor(Color.rgb(243, 247, 250))
+                                    cornerRadius = dp(8).toFloat()
+                                    setStroke(
+                                        dp(1),
+                                        Color.rgb(210, 220, 230)
+                                    )
+                                }
+                        }
+
+                        card.addView(
+                            TextView(this).apply {
+                                text = "🔐 LOGIN USER — $username"
+                                textSize = 15f
+                                typeface = Typeface.DEFAULT_BOLD
+                                setTextColor(Color.rgb(22, 125, 75))
+                            }
+                        )
+
+                        card.addView(
+                            TextView(this).apply {
+                                text = if (!savedContactName.isNullOrBlank()) {
+                                    "📱 $savedContactName ($mobile)"
+                                } else {
+                                    "📱 $mobile"
+                                }
+                                textSize = 13f
+                                setTextColor(Color.rgb(25, 90, 130))
+                            }
+                        )
+
+                        card.addView(
+                            TextView(this).apply {
+                                text = "📧 ईमेल: $email"
+                                textSize = 12f
+                            }
+                        )
+
+                        card.addView(
+                            TextView(this).apply {
+                                text = "🆔 UID: ${profile.id}"
+                                textSize = 10f
+                            }
+                        )
+
+                        card.addView(
+                            TextView(this).apply {
+                                text = if (following) {
+                                    "🔔 चैनल फॉलो: हाँ"
+                                } else {
+                                    "🔕 चैनल फॉलो: नहीं"
+                                }
+                                textSize = 12f
+                                setTextColor(
+                                    if (following) {
+                                        Color.rgb(22, 125, 75)
+                                    } else {
+                                        Color.rgb(185, 35, 35)
+                                    }
+                                )
+                            }
+                        )
+
+                        userList.addView(
+                            card,
+                            LinearLayout.LayoutParams(-1, -2).apply {
+                                bottomMargin = dp(10)
+                            }
+                        )
+                    }
+
+                    // 4. इंस्टॉल और Guest की गिनती अलग से।
+                    db.collection("app_installs")
                         .get()
-                        .addOnSuccessListener { accounts ->
+                        .addOnSuccessListener { installs ->
 
                             if (isFinishing || isDestroyed) {
                                 return@addOnSuccessListener
                             }
 
-                            db.collection("channel_followers")
+                            val installDocs =
+                                installs.documents
+
+                            db.collection("app_install_accounts")
                                 .get()
-                                .addOnSuccessListener { followers ->
+                                .addOnSuccessListener { accounts ->
 
                                     if (isFinishing || isDestroyed) {
                                         return@addOnSuccessListener
                                     }
 
-                                    val profileByUid =
-                                        profiles.documents.associateBy { it.id }
-
-                                    val followerIds =
-                                        followers.documents.map { it.id }.toSet()
-
-                                    // हर इंस्टॉलेशन के लिए नवीनतम Login रिकॉर्ड।
-                                    val accountByInstall =
-                                        accounts.documents
-                                            .filter {
-                                                it.getString("installId")
-                                                    .orEmpty().isNotBlank()
-                                            }
-                                            .groupBy {
-                                                it.getString("installId").orEmpty()
-                                            }
-                                            .mapValues { entry ->
-                                                entry.value.maxByOrNull {
-                                                    it.getLong("lastLoginAt") ?: 0L
-                                                }
-                                            }
-
-                                    val installDocs =
-                                        installs.documents.sortedByDescending {
-                                            it.getLong("lastSeenAt") ?: 0L
-                                        }
+                                    val accountInstallIds =
+                                        accounts.documents.mapNotNull {
+                                            it.getString("installId")
+                                                ?.takeIf { id -> id.isNotBlank() }
+                                        }.toSet()
 
                                     val loginCount =
-                                        installDocs.count { install ->
-                                            val linkedAccount =
-                                                accountByInstall[install.id]
-                                                    ?.getString("accountUid")
-
-                                            !linkedAccount.isNullOrBlank()
+                                        installDocs.count {
+                                            it.id in accountInstallIds
                                         }
 
                                     val guestCount =
@@ -4019,14 +4133,6 @@ val localContactNames =
                                                 24L * 60L * 60L * 1000L
                                         }
 
-                                    val registeredCount =
-    profiles.size()
-
-                                    val followerCount =
-                                        followerIds.count {
-                                            profileByUid.containsKey(it)
-                                        }
-
                                     summary.text =
                                         "📱 कुल ऐप इंस्टॉलेशन: ${installDocs.size}\n\n" +
                                         "🔐 Login वाले इंस्टॉलेशन: $loginCount\n\n" +
@@ -4035,226 +4141,32 @@ val localContactNames =
                                         "📋 पंजीकृत प्रोफाइल: $registeredCount\n\n" +
                                         "🔔 चैनल फॉलो करने वाले प्रोफाइल: $followerCount"
 
-                                    userList.removeAllViews()
-
-                                    if (installDocs.isEmpty()) {
-                                        userList.addView(
-                                            TextView(this).apply {
-                                                text =
-                                                    "अभी ऐप खोलने का कोई इंस्टॉलेशन रिकॉर्ड नहीं मिला।"
-                                                textSize = 14f
-                                                setPadding(0, dp(16), 0, dp(16))
-                                            }
-                                        )
-                                        return@addOnSuccessListener
-                                    }
-
-                                    fun dateText(value: Long?): String {
-                                        if (value == null || value <= 0L) {
-                                            return "उपलब्ध नहीं"
-                                        }
-
-                                        return try {
-                                            java.text.SimpleDateFormat(
-                                                "dd-MM-yyyy hh:mm a",
-                                                java.util.Locale.getDefault()
-                                            ).format(java.util.Date(value))
-                                        } catch (_: Exception) {
-                                            "उपलब्ध नहीं"
-                                        }
-                                    }
-
-                                    installDocs.forEach { install ->
-
-                                        val installId = install.id
-
-                                        val originalUid =
-                                            install.getString("uid").orEmpty()
-
-                                        val linkedAccount =
-                                            accountByInstall[installId]
-                                                ?.getString("accountUid")
-                                                .orEmpty()
-
-                                        // Login लिंक उपलब्ध न हो तो पुराने UID से प्रोफाइल खोजें।
-                                        val profile =
-                                            profileByUid[linkedAccount]
-                                                ?: profileByUid[originalUid]
-
-                                        val isLoggedIn =
-                                            linkedAccount.isNotBlank() ||
-                                                profile != null
-
-                                        val username =
-    profile?.getString("displayName")
-        ?: profile?.getString("username")
-        ?: profile?.getString("name")
-        ?: "नाम उपलब्ध नहीं"
-
-                                        val email =
-                                            profile?.getString("email")
-                                                ?: "ईमेल उपलब्ध नहीं"
-
-                                        val mobile =
-                                            profile?.getString("mobileNumber")
-                                                ?: "मोबाइल उपलब्ध नहीं"
-
-                                        val profileUid =
-                                            profile?.id ?: linkedAccount
-
-                                        val following =
-                                            profileUid.isNotBlank() &&
-                                                profileUid in followerIds
-
-                                        val card = LinearLayout(this).apply {
-                                            orientation = LinearLayout.VERTICAL
-                                            setPadding(
-                                                dp(10),
-                                                dp(10),
-                                                dp(10),
-                                                dp(10)
-                                            )
-                                            background =
-                                                android.graphics.drawable.GradientDrawable().apply {
-                                                    setColor(Color.rgb(243, 247, 250))
-                                                    cornerRadius = dp(8).toFloat()
-                                                    setStroke(
-                                                        dp(1),
-                                                        Color.rgb(210, 220, 230)
-                                                    )
-                                                }
-                                        }
-
-                                        card.addView(
-                                            TextView(this).apply {
-                                                text = if (isLoggedIn) {
-                                                    "🔐 LOGIN USER — $username"
-                                                } else {
-                                                    "👤 GUEST USER"
-                                                }
-                                                textSize = 15f
-                                                typeface = Typeface.DEFAULT_BOLD
-                                                setTextColor(
-                                                    if (isLoggedIn) {
-                                                        Color.rgb(22, 125, 75)
-                                                    } else {
-                                                        Color.rgb(230, 126, 34)
-                                                    }
-                                                )
-                                            }
-                                        )
-
-                                        val normalizedMobile =
-    mobile.filter { it.isDigit() }.takeLast(10)
-
-val savedContactName =
-    localContactNames[normalizedMobile]
-
-card.addView(
-    TextView(this).apply {
-        text = if (!savedContactName.isNullOrBlank()) {
-            "📱 $savedContactName ($mobile)"
-        } else {
-            "📱 $mobile"
-        }
-        textSize = 13f
-        setTextColor(Color.rgb(25, 90, 130))
-    }
-)
-
-                                        card.addView(
-                                            TextView(this).apply {
-                                                text = "📧 ईमेल: $email"
-                                                textSize = 12f
-                                            }
-                                        )
-
-                                        card.addView(
-                                            TextView(this).apply {
-                                                text =
-                                                    "🆔 Install ID: " +
-                                                    installId.take(16) + "..."
-                                                textSize = 10f
-                                            }
-                                        )
-
-                                        card.addView(
-                                            TextView(this).apply {
-                                                text =
-                                                    "📅 पहली बार खुला: " +
-                                                    dateText(
-                                                        install.getLong("firstSeenAt")
-                                                    )
-                                                textSize = 12f
-                                            }
-                                        )
-
-                                        card.addView(
-                                            TextView(this).apply {
-                                                text =
-                                                    "🕒 आखिरी बार सक्रिय: " +
-                                                    dateText(
-                                                        install.getLong("lastSeenAt")
-                                                    )
-                                                textSize = 12f
-                                            }
-                                        )
-
-                                        if (isLoggedIn) {
-                                            card.addView(
-                                                TextView(this).apply {
-                                                    text = if (following) {
-                                                        "🔔 चैनल फॉलो: हाँ"
-                                                    } else {
-                                                        "🔕 चैनल फॉलो: नहीं"
-                                                    }
-                                                    textSize = 12f
-                                                    setTextColor(
-                                                        if (following) {
-                                                            Color.rgb(22, 125, 75)
-                                                        } else {
-                                                            Color.rgb(185, 35, 35)
-                                                        }
-                                                    )
-                                                }
-                                            )
-                                        }
-
-                                        userList.addView(
-                                            card,
-                                            LinearLayout.LayoutParams(
-                                                -1,
-                                                -2
-                                            ).apply {
-                                                bottomMargin = dp(10)
-                                            }
-                                        )
-                                    }
                                 }
                                 .addOnFailureListener { error ->
-    if (!isFinishing && !isDestroyed) {
-        showUserReadError("group_profiles", error)
-    }
-}
+                                    summary.text =
+                                        "📋 पंजीकृत प्रोफाइल: $registeredCount\n\n" +
+                                        "🔔 चैनल फॉलो: $followerCount\n\n" +
+                                        "❌ Login रिकॉर्ड पढ़ने में समस्या: ${error.message}"
+                                }
                         }
                         .addOnFailureListener { error ->
-    if (!isFinishing && !isDestroyed) {
-        showUserReadError("app_installs", error)
-    }
-}
+                            summary.text =
+                                "📋 पंजीकृत प्रोफाइल: $registeredCount\n\n" +
+                                "🔔 चैनल फॉलो: $followerCount\n\n" +
+                                "❌ Install रिकॉर्ड पढ़ने में समस्या: ${error.message}"
+                        }
+
                 }
                 .addOnFailureListener { error ->
-    if (!isFinishing && !isDestroyed) {
-        showUserReadError("app_install_accounts", error)
-    }
-}
+                    showUserReadError("channel_followers", error)
+                }
+
         }
         .addOnFailureListener { error ->
-    if (!isFinishing && !isDestroyed) {
-        showUserReadError("channel_followers", error)
-    }
+            showUserReadError("group_profiles", error)
+        }
 }
-}
+
 
 
     
