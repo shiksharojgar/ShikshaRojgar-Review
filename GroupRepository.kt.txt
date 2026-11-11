@@ -641,4 +641,35 @@ onResult(posts)
                 done(false, error.localizedMessage ?: "शिकायत भेजी नहीं जा सकी।")
             }
     }
+
+    // --------------------------------------------------
+    // USER: LOAD MY PRIVATE COMPLAINTS AND ADMIN REPLIES
+    // --------------------------------------------------
+
+    fun loadMyReports(
+        onResult: (List<com.google.firebase.firestore.DocumentSnapshot>) -> Unit,
+        onError: (Exception) -> Unit
+    ) {
+        val user = auth.currentUser
+
+        if (user == null || user.isAnonymous) {
+            onError(Exception("अपनी शिकायतें देखने के लिए लॉगिन करें।"))
+            return
+        }
+
+        reportsRef
+            .whereEqualTo("uid", user.uid)
+            .get()
+            .addOnSuccessListener { snapshot ->
+
+                val reports = snapshot.documents.sortedByDescending {
+                    it.getTimestamp("createdAt")?.toDate()?.time ?: 0L
+                }
+
+                onResult(reports)
+            }
+            .addOnFailureListener { error ->
+                onError(error)
+            }
+    }
 }
