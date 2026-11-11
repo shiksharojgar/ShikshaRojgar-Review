@@ -4086,9 +4086,10 @@ val localContactNames =
                                                 profile != null
 
                                         val username =
-                                            profile?.getString("username")
-                                                ?: profile?.getString("name")
-                                                ?: "नाम उपलब्ध नहीं"
+    profile?.getString("displayName")
+        ?: profile?.getString("username")
+        ?: profile?.getString("name")
+        ?: "नाम उपलब्ध नहीं"
 
                                         val email =
                                             profile?.getString("email")
