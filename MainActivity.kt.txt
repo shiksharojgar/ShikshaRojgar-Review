@@ -488,9 +488,7 @@ enlargeHeaderIcon(findViewById(R.id.notificationButton))
 
         AnalyticsTracker.appOpen(this)
 
-        ChannelRepository.ensureSignedIn {
-            AnalyticsTracker.appIdentity(this)
-        }
+        AnalyticsTracker.appIdentity(this)
 
         setupFirebaseNotifications()
 
