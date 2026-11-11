@@ -47,11 +47,16 @@ private lateinit var memberCountView: TextView
         registerForActivityResult(
             ActivityResultContracts.StartActivityForResult()
         ) { result ->
-            if (result.resultCode == Activity.RESULT_OK) {
-                updateLoginState()
-                loadMyPendingPosts()
-            }
+    if (result.resultCode == Activity.RESULT_OK) {
+        updateLoginState()
+        loadMyPendingPosts()
+
+        val user = auth.currentUser
+        if (user != null && !user.isAnonymous) {
+            joinGroup()
         }
+    }
+}
 
     override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -70,18 +75,94 @@ listenToMemberCount()
     }
 }
 
-   private fun listenToMemberCount() {
-    db.document("channel_config/main")
+private fun listenToMemberCount() {
+    db.document("group_config/main")
         .addSnapshotListener { snapshot, error ->
+
             if (error != null) {
+                android.util.Log.e(
+                    "GroupActivity",
+                    "Member count error",
+                    error
+                )
                 return@addSnapshotListener
             }
 
-            val count = snapshot?.getLong("totalAppUsers") ?: 0L
+            val count =
+                snapshot?.getLong("memberCount") ?: 0L
 
             memberCountView.text =
                 "👥 ${String.format(Locale.US, "%,d", count)} Members"
         }
+}
+
+private fun joinGroup() {
+    val user = auth.currentUser
+
+    if (user == null || user.isAnonymous) {
+        openLogin()
+        return
+    }
+
+    val uid = user.uid
+
+    val memberRef = db.collection("group_members")
+        .document(uid)
+
+    val configRef = db.document("group_config/main")
+
+    memberCountView.text = "⏳ Joining..."
+
+    db.runTransaction { transaction ->
+
+        val member = transaction.get(memberRef)
+        val config = transaction.get(configRef)
+
+        if (member.exists()) {
+            false
+        } else {
+            val currentCount =
+                config.getLong("memberCount") ?: 0L
+
+            transaction.set(
+                memberRef,
+                mapOf(
+                    "uid" to uid,
+                    "joinedAt" to
+                        com.google.firebase.firestore.FieldValue.serverTimestamp()
+                )
+            )
+
+            transaction.set(
+                configRef,
+                mapOf(
+                    "memberCount" to currentCount + 1,
+                    "updatedAt" to
+                        com.google.firebase.firestore.FieldValue.serverTimestamp()
+                )
+            )
+
+            true
+        }
+
+    }.addOnSuccessListener { joined ->
+
+        if (joined) {
+            toast("🎉 आप शिक्षा रोजगार ग्रुप में Join हो गए हैं।")
+        } else {
+            toast("आप पहले से ग्रुप के सदस्य हैं।")
+        }
+
+    }.addOnFailureListener { error ->
+
+        android.util.Log.e(
+            "GroupActivity",
+            "Group Join failed",
+            error
+        )
+
+        toast("Join नहीं हो सका। कृपया दोबारा प्रयास करें।")
+    }
 }
    
     private fun dp(value: Int): Int {
@@ -193,8 +274,15 @@ onShare = {
             }
             isClickable = true
             isFocusable = true
-            setOnClickListener {
-                openLogin()
+                        setOnClickListener {
+                val user = auth.currentUser
+
+                if (user == null || user.isAnonymous) {
+                    openLogin()
+                } else {
+                    joinGroup()
+                }
+            }
             }
         }
 
