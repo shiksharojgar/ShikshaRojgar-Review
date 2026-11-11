@@ -558,6 +558,7 @@ private fun showGroupReportDetailsWithName(
         $reply
     """.trimIndent()
 
+    
     val options = arrayOf(
         "✉️ Admin Reply भेजें",
         "👁 Reviewed करें",
@@ -568,134 +569,122 @@ private fun showGroupReportDetailsWithName(
     androidx.appcompat.app.AlertDialog.Builder(this)
         .setTitle("शिकायत का विवरण")
         .setMessage(details)
-        .setItems(options) { _, position ->
+        .setPositiveButton("कार्रवाई करें") { _, _ ->
 
-            when (position) {
+            androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("शिकायत पर कार्रवाई चुनें")
+                .setItems(options) { _, position ->
 
-                // PRIVATE ADMIN REPLY
-                0 -> {
-                    val replyField =
-                        android.widget.EditText(this).apply {
-                            hint = "अपना जवाब लिखें"
-                            minLines = 3
-                            gravity = android.view.Gravity.TOP
-                        }
+                    when (position) {
 
-                    androidx.appcompat.app.AlertDialog.Builder(this)
-                        .setTitle("Admin Reply")
-                        .setView(replyField)
-                        .setPositiveButton("भेजें") { _, _ ->
+                        0 -> {
+                            val replyField =
+                                android.widget.EditText(this).apply {
+                                    hint = "अपना जवाब लिखें"
+                                    minLines = 3
+                                    gravity = android.view.Gravity.TOP
+                                }
 
-                            val answer =
-                                replyField.text.toString().trim()
+                            androidx.appcompat.app.AlertDialog.Builder(this)
+                                .setTitle("Admin Reply")
+                                .setView(replyField)
+                                .setPositiveButton("भेजें") { _, _ ->
 
-                            if (answer.isBlank()) {
-                                toast("जवाब खाली नहीं हो सकता")
-                                return@setPositiveButton
-                            }
+                                    val answer =
+                                        replyField.text.toString().trim()
 
-                            report.reference.update(
-                                mapOf(
-                                    "adminReply" to answer,
-                                    "status" to "reviewed",
-                                    "repliedAt" to
-                                        com.google.firebase.firestore.FieldValue.serverTimestamp()
-                                )
-                            ).addOnSuccessListener {
+                                    if (answer.isBlank()) {
+                                        toast("जवाब खाली नहीं हो सकता")
+                                        return@setPositiveButton
+                                    }
 
-                                toast("Admin Reply सेव हो गया")
+                                    report.reference.update(
+                                        mapOf(
+                                            "adminReply" to answer,
+                                            "status" to "reviewed",
+                                            "repliedAt" to
+                                                com.google.firebase.firestore.FieldValue.serverTimestamp()
+                                        )
+                                    ).addOnSuccessListener {
 
-                                androidx.appcompat.app.AlertDialog.Builder(this)
-                                    .setTitle("👥 ग्रुप में भी साझा करें?")
-                                    .setMessage(
-                                        "क्या आप केवल अपना Admin जवाब " +
-                                        "ग्रुप में भी साझा करना चाहते हैं?\n\n" +
-                                        "शिकायत और शिकायतकर्ता का नाम " +
-                                        "सार्वजनिक नहीं किया जाएगा।\n\n" +
-                                        "ग्रुप में भेजा गया जवाब पहले Pending रहेगा।"
-                                    )
-                                    .setPositiveButton("ग्रुप में साझा करें") { _, _ ->
+                                        toast("Admin Reply सेव हो गया")
 
-                                        val publicBody =
-                                            "📢 Shiksha Rojgar Admin की ओर से जवाब:\n\n" +
-                                            answer
+                                        androidx.appcompat.app.AlertDialog.Builder(this)
+                                            .setTitle("👥 ग्रुप में भी साझा करें?")
+                                            .setMessage(
+                                                "क्या आप केवल अपना Admin जवाब " +
+                                                "ग्रुप में भी साझा करना चाहते हैं?\n\n" +
+                                                "शिकायत और शिकायतकर्ता का नाम " +
+                                                "सार्वजनिक नहीं किया जाएगा।\n\n" +
+                                                "ग्रुप में भेजा गया जवाब पहले Pending रहेगा।"
+                                            )
+                                            .setPositiveButton("ग्रुप में साझा करें") { _, _ ->
 
-                                        GroupRepository.submitPost(
-                                            displayName = "Shiksha Rojgar Admin",
-                                            body = publicBody
-                                        ) { success, error ->
+                                                val publicBody =
+                                                    "📢 Shiksha Rojgar Admin की ओर से जवाब:\n\n" +
+                                                    answer
 
-                                            runOnUiThread {
+                                                GroupRepository.submitPost(
+                                                    displayName = "Shiksha Rojgar Admin",
+                                                    body = publicBody
+                                                ) { success, error ->
 
-                                                if (success) {
-                                                    toast(
-                                                        "जवाब ग्रुप में Pending पोस्ट के रूप में भेज दिया गया।"
-                                                    )
-                                                } else {
-                                                    toast(
-                                                        "ग्रुप में साझा नहीं हुआ: " +
-                                                        (error ?: "अज्ञात त्रुटि")
-                                                    )
+                                                    runOnUiThread {
+                                                        if (success) {
+                                                            toast("जवाब ग्रुप में Pending पोस्ट के रूप में भेज दिया गया।")
+                                                        } else {
+                                                            toast(
+                                                                "ग्रुप में साझा नहीं हुआ: " +
+                                                                    (error ?: "अज्ञात त्रुटि")
+                                                            )
+                                                        }
+
+                                                        showGroupReportsManager()
+                                                    }
                                                 }
-
+                                            }
+                                            .setNegativeButton("अभी नहीं") { _, _ ->
                                                 showGroupReportsManager()
                                             }
+                                            .show()
+
+                                    }.addOnFailureListener {
+                                        toast("Reply सेव नहीं हुआ: ${it.localizedMessage}")
+                                    }
+                                }
+                                .setNegativeButton("रद्द करें", null)
+                                .show()
+                        }
+
+                        1 -> updateGroupReportStatus(report, "reviewed")
+
+                        2 -> updateGroupReportStatus(report, "resolved")
+
+                        3 -> {
+                            androidx.appcompat.app.AlertDialog.Builder(this)
+                                .setTitle("शिकायत Delete करें?")
+                                .setMessage("क्या आप इस शिकायत को स्थायी रूप से हटाना चाहते हैं?")
+                                .setPositiveButton("हाँ, Delete करें") { _, _ ->
+                                    report.reference.delete()
+                                        .addOnSuccessListener {
+                                            toast("शिकायत Delete हो गई")
+                                            showGroupReportsManager()
                                         }
-                                    }
-                                    .setNegativeButton("अभी नहीं") { _, _ ->
-                                        showGroupReportsManager()
-                                    }
-                                    .show()
-
-                            }.addOnFailureListener {
-                                toast(
-                                    "Reply सेव नहीं हुआ: ${it.localizedMessage}"
-                                )
-                            }
-                        }
-                        .setNegativeButton("रद्द करें", null)
-                        .show()
-                }
-
-                // REVIEWED
-                1 -> updateGroupReportStatus(report, "reviewed")
-
-                // RESOLVED
-                2 -> updateGroupReportStatus(report, "resolved")
-
-                // DELETE
-                3 -> {
-                    androidx.appcompat.app.AlertDialog.Builder(this)
-                        .setTitle("शिकायत Delete करें?")
-                        .setMessage(
-                            "क्या आप इस शिकायत को स्थायी रूप से हटाना चाहते हैं?"
-                        )
-                        .setPositiveButton("हाँ, Delete करें") { _, _ ->
-
-                            report.reference.delete()
-                                .addOnSuccessListener {
-                                    toast("शिकायत Delete हो गई")
-                                    showGroupReportsManager()
+                                        .addOnFailureListener {
+                                            toast("Delete नहीं हुई: ${it.localizedMessage}")
+                                        }
                                 }
-                                .addOnFailureListener {
-                                    toast(
-                                        "Delete नहीं हुई: ${it.localizedMessage}"
-                                    )
-                                }
+                                .setNegativeButton("नहीं", null)
+                                .show()
                         }
-                        .setNegativeButton("नहीं", null)
-                        .show()
+                    }
                 }
-            }
+                .setNegativeButton("वापस", null)
+                .show()
         }
-        .setNegativeButton("वापस", null)
+        .setNegativeButton("बंद करें", null)
         .show()
 }
-
-    
-
-
-
 
                                         
 
