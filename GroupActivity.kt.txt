@@ -42,21 +42,29 @@ class GroupActivity : AppCompatActivity() {
 private lateinit var memberCountView: TextView
     
     private var feedStarted = false
+private var pendingJoinAfterLogin = false
 
     private val loginLauncher =
-        registerForActivityResult(
-            ActivityResultContracts.StartActivityForResult()
-        ) { result ->
-    if (result.resultCode == Activity.RESULT_OK) {
-        updateLoginState()
-        loadMyPendingPosts()
+    registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
 
-        val user = auth.currentUser
-        if (user != null && !user.isAnonymous) {
-            joinGroup()
+        if (result.resultCode == Activity.RESULT_OK) {
+            updateLoginState()
+            loadMyPendingPosts()
+
+            if (pendingJoinAfterLogin) {
+                pendingJoinAfterLogin = false
+
+                val user = auth.currentUser
+                if (user != null && !user.isAnonymous) {
+                    joinGroup()
+                }
+            }
+        } else {
+            pendingJoinAfterLogin = false
         }
     }
-}
 
     override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -275,14 +283,15 @@ onShare = {
             isClickable = true
             isFocusable = true
                         setOnClickListener {
-                val user = auth.currentUser
+    val user = auth.currentUser
 
-                if (user == null || user.isAnonymous) {
-                    openLogin()
-                } else {
-                    joinGroup()
-                }
-            }
+    if (user == null || user.isAnonymous) {
+        pendingJoinAfterLogin = true
+        openLogin()
+    } else {
+        joinGroup()
+    }
+}
             }
         }
 
