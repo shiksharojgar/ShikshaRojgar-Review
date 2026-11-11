@@ -46,17 +46,14 @@ fun appIdentity(context: Context) {
         val installRef = db.collection("app_installs")
             .document(stableInstallId)
 
+        
         val configRef = db.document("channel_config/main")
 
-        // पहला रिकॉर्ड: इस फोन पर ऐप कब पहली बार खुला।
+        // पहले फोन का इंस्टॉल रिकॉर्ड सुरक्षित करें।
         db.runTransaction { transaction ->
             val installSnapshot = transaction.get(installRef)
 
             if (!installSnapshot.exists()) {
-                val configSnapshot = transaction.get(configRef)
-                val currentCount =
-                    configSnapshot.getLong("totalAppUsers") ?: 0L
-
                 transaction.set(
                     installRef,
                     mapOf(
@@ -66,24 +63,31 @@ fun appIdentity(context: Context) {
                         "lastSeenAt" to now
                     )
                 )
-
-                transaction.set(
-                    configRef,
-                    mapOf(
-                        "totalAppUsers" to currentCount + 1L
-                    ),
-                    com.google.firebase.firestore.SetOptions.merge()
-                )
+                true
             } else {
-                // पुराने UID और पहली बार खुलने का समय सुरक्षित रखें।
                 transaction.update(
                     installRef,
                     "lastSeenAt",
                     now
                 )
+                false
+            }
+        }.addOnSuccessListener { isNewInstall ->
+
+            // नया इंस्टॉल होने पर ही कुल संख्या बढ़ाएँ।
+            if (isNewInstall) {
+                configRef.update(
+                    "totalAppUsers",
+                    com.google.firebase.firestore.FieldValue.increment(1L)
+                ).addOnFailureListener { error ->
+                    android.util.Log.e(
+                        "AnalyticsTracker",
+                        "Total app users update failed",
+                        error
+                    )
+                }
             }
 
-            null
         }.addOnFailureListener { error ->
             android.util.Log.e(
                 "AnalyticsTracker",
@@ -91,6 +95,7 @@ fun appIdentity(context: Context) {
                 error
             )
         }
+
 
         // दूसरा रिकॉर्ड: वास्तविक Login अकाउंट की जानकारी।
         // Anonymous/Guest अकाउंट यहाँ दर्ज नहीं होगा।
