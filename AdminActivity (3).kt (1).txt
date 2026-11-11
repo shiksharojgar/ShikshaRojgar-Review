@@ -512,6 +512,7 @@ private fun showGroupReportDetails(
         }
 }
 
+
 private fun showGroupReportDetailsWithName(
     report: com.google.firebase.firestore.DocumentSnapshot,
     displayName: String
@@ -571,6 +572,7 @@ private fun showGroupReportDetailsWithName(
 
             when (position) {
 
+                // PRIVATE ADMIN REPLY
                 0 -> {
                     val replyField =
                         android.widget.EditText(this).apply {
@@ -599,7 +601,7 @@ private fun showGroupReportDetailsWithName(
                                     "repliedAt" to
                                         com.google.firebase.firestore.FieldValue.serverTimestamp()
                                 )
-                                                        ).addOnSuccessListener {
+                            ).addOnSuccessListener {
 
                                 toast("Admin Reply सेव हो गया")
 
@@ -646,21 +648,28 @@ private fun showGroupReportDetailsWithName(
                                     .show()
 
                             }.addOnFailureListener {
-                                toast("Reply सेव नहीं हुआ: ${it.localizedMessage}")
+                                toast(
+                                    "Reply सेव नहीं हुआ: ${it.localizedMessage}"
+                                )
                             }
                         }
                         .setNegativeButton("रद्द करें", null)
                         .show()
                 }
 
+                // REVIEWED
                 1 -> updateGroupReportStatus(report, "reviewed")
 
+                // RESOLVED
                 2 -> updateGroupReportStatus(report, "resolved")
 
+                // DELETE
                 3 -> {
                     androidx.appcompat.app.AlertDialog.Builder(this)
                         .setTitle("शिकायत Delete करें?")
-                        .setMessage("क्या आप इस शिकायत को स्थायी रूप से हटाना चाहते हैं?")
+                        .setMessage(
+                            "क्या आप इस शिकायत को स्थायी रूप से हटाना चाहते हैं?"
+                        )
                         .setPositiveButton("हाँ, Delete करें") { _, _ ->
 
                             report.reference.delete()
@@ -669,7 +678,9 @@ private fun showGroupReportDetailsWithName(
                                     showGroupReportsManager()
                                 }
                                 .addOnFailureListener {
-                                    toast("Delete नहीं हुई: ${it.localizedMessage}")
+                                    toast(
+                                        "Delete नहीं हुई: ${it.localizedMessage}"
+                                    )
                                 }
                         }
                         .setNegativeButton("नहीं", null)
@@ -680,6 +691,13 @@ private fun showGroupReportDetailsWithName(
         .setNegativeButton("वापस", null)
         .show()
 }
+
+    
+
+
+
+
+                                        
 
 // =====================================================
 // UPDATE REPORT STATUS
