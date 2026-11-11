@@ -342,105 +342,7 @@ onShare = {
             text = "🛡️ शिकायत / सुझाव भेजें"
             setOnClickListener {
 
-    // --------------------------------------------------
-    // USER: MY PRIVATE REPORTS AND ADMIN REPLIES
-    // --------------------------------------------------
-
-    private fun showMyReports() {
-
-        val user = auth.currentUser
-
-        if (user == null || user.isAnonymous) {
-            AlertDialog.Builder(this)
-                .setTitle("लॉगिन आवश्यक है")
-                .setMessage("अपनी शिकायतें और Admin के जवाब देखने के लिए लॉगिन करें।")
-                .setPositiveButton("लॉगिन करें") { _, _ ->
-                    openLogin()
-                }
-                .setNegativeButton("रद्द करें", null)
-                .show()
-            return
-        }
-
-        GroupRepository.loadMyReports(
-            onResult = { reports ->
-
-                if (reports.isEmpty()) {
-                    toast("आपकी कोई शिकायत अभी उपलब्ध नहीं है।")
-                    return@loadMyReports
-                }
-
-                val items = reports.mapIndexed { index, report ->
-
-                    val subject =
-                        report.getString("subject") ?: "बिना विषय"
-
-                    val status =
-                        when (report.getString("status")) {
-                            "reviewed" -> "👁 देख ली गई"
-                            "resolved" -> "✅ समाधान हो गया"
-                            else -> "🕒 नई शिकायत"
-                        }
-
-                    "${index + 1}. $subject\n$status"
-                }
-
-                AlertDialog.Builder(this)
-                    .setTitle("📬 मेरी शिकायतें (${reports.size})")
-                    .setItems(items.toTypedArray()) { _, position ->
-
-                        val report = reports[position]
-
-                        val subject =
-                            report.getString("subject") ?: ""
-
-                        val message =
-                            report.getString("message") ?: ""
-
-                        val status =
-                            report.getString("status") ?: "open"
-
-                        val reply =
-                            report.getString("adminReply")
-                                ?: "Admin ने अभी जवाब नहीं दिया है।"
-
-                        val statusText = when (status) {
-                            "reviewed" -> "देख ली गई"
-                            "resolved" -> "समाधान हो गया"
-                            else -> "नई शिकायत"
-                        }
-
-                        val details = """
-                            विषय:
-                            $subject
-
-                            आपकी शिकायत:
-                            $message
-
-                            स्थिति:
-                            $statusText
-
-                            Admin का निजी जवाब:
-                            $reply
-                        """.trimIndent()
-
-                        AlertDialog.Builder(this)
-                            .setTitle("शिकायत का विवरण")
-                            .setMessage(details)
-                            .setPositiveButton("बंद करें", null)
-                            .show()
-                    }
-                    .setNegativeButton("बंद करें", null)
-                    .show()
-            },
-            onError = { error ->
-                toast(
-                    "शिकायतें लोड नहीं हुईं: " +
-                        (error.localizedMessage ?: "त्रुटि")
-                )
-            }
-        )
-    }
+    
                 openReportDialog(null)
             }
         }
@@ -1216,6 +1118,105 @@ if (!user.isEmailVerified) {
             }
             .setNegativeButton("रद्द करें", null)
             .show()
+    }
+// --------------------------------------------------
+    // USER: MY PRIVATE REPORTS AND ADMIN REPLIES
+    // --------------------------------------------------
+
+    private fun showMyReports() {
+
+        val user = auth.currentUser
+
+        if (user == null || user.isAnonymous) {
+            AlertDialog.Builder(this)
+                .setTitle("लॉगिन आवश्यक है")
+                .setMessage("अपनी शिकायतें और Admin के जवाब देखने के लिए लॉगिन करें।")
+                .setPositiveButton("लॉगिन करें") { _, _ ->
+                    openLogin()
+                }
+                .setNegativeButton("रद्द करें", null)
+                .show()
+            return
+        }
+
+        GroupRepository.loadMyReports(
+            onResult = { reports ->
+
+                if (reports.isEmpty()) {
+                    toast("आपकी कोई शिकायत अभी उपलब्ध नहीं है।")
+                    return@loadMyReports
+                }
+
+                val items = reports.mapIndexed { index, report ->
+
+                    val subject =
+                        report.getString("subject") ?: "बिना विषय"
+
+                    val status =
+                        when (report.getString("status")) {
+                            "reviewed" -> "👁 देख ली गई"
+                            "resolved" -> "✅ समाधान हो गया"
+                            else -> "🕒 नई शिकायत"
+                        }
+
+                    "${index + 1}. $subject\n$status"
+                }
+
+                AlertDialog.Builder(this)
+                    .setTitle("📬 मेरी शिकायतें (${reports.size})")
+                    .setItems(items.toTypedArray()) { _, position ->
+
+                        val report = reports[position]
+
+                        val subject =
+                            report.getString("subject") ?: ""
+
+                        val message =
+                            report.getString("message") ?: ""
+
+                        val status =
+                            report.getString("status") ?: "open"
+
+                        val reply =
+                            report.getString("adminReply")
+                                ?: "Admin ने अभी जवाब नहीं दिया है।"
+
+                        val statusText = when (status) {
+                            "reviewed" -> "देख ली गई"
+                            "resolved" -> "समाधान हो गया"
+                            else -> "नई शिकायत"
+                        }
+
+                        val details = """
+                            विषय:
+                            $subject
+
+                            आपकी शिकायत:
+                            $message
+
+                            स्थिति:
+                            $statusText
+
+                            Admin का निजी जवाब:
+                            $reply
+                        """.trimIndent()
+
+                        AlertDialog.Builder(this)
+                            .setTitle("शिकायत का विवरण")
+                            .setMessage(details)
+                            .setPositiveButton("बंद करें", null)
+                            .show()
+                    }
+                    .setNegativeButton("बंद करें", null)
+                    .show()
+            },
+            onError = { error ->
+                toast(
+                    "शिकायतें लोड नहीं हुईं: " +
+                        (error.localizedMessage ?: "त्रुटि")
+                )
+            }
+        )
     }
 
     private fun openReportDialog(postId: String?) {
