@@ -482,10 +482,13 @@ private fun showGroupReportsManager() {
         }
 }
 
-// शिकायतकर्ता का नाम group_profiles से प्राप्त करें
-private fun showGroupReportDetailsWithName(
-    report: com.google.firebase.firestore.DocumentSnapshot,
-    displayName: String
+
+// =====================================================
+// SINGLE REPORT DETAILS WITH USER NAME
+// =====================================================
+
+private fun showGroupReportDetails(
+    report: com.google.firebase.firestore.DocumentSnapshot
 ) {
     val uid = report.getString("uid").orEmpty()
 
@@ -509,22 +512,109 @@ private fun showGroupReportDetailsWithName(
         }
 }
 
+private fun showGroupReportDetailsWithName(
+    report: com.google.firebase.firestore.DocumentSnapshot,
+    displayName: String
+) {
+    val subject = report.getString("subject") ?: ""
+    val message = report.getString("message") ?: ""
+    val solution = report.getString("suggestedSolution") ?: ""
+    val postId = report.getString("postId") ?: "नहीं दिया गया"
+    val status = report.getString("status") ?: "open"
+    val reply = report.getString("adminReply") ?: "अभी जवाब नहीं दिया गया"
+
+    val date = report.getTimestamp("createdAt")
+        ?.toDate()
+        ?.let {
+            java.text.SimpleDateFormat(
+                "dd-MM-yyyy HH:mm",
+                java.util.Locale.getDefault()
+            ).format(it)
+        } ?: "तारीख उपलब्ध नहीं"
+
+    val details = """
+        विषय: $subject
+
+        शिकायतकर्ता का नाम:
+        $displayName
+
+        शिकायत:
+        $message
+
+        सुझाया गया समाधान:
+        $solution
+
+        संबंधित पोस्ट ID:
+        $postId
+
+        तारीख:
+        $date
+
+        वर्तमान स्थिति:
+        $status
+
+        Admin Reply:
+        $reply
+    """.trimIndent()
+
+    val options = arrayOf(
+        "✉️ Admin Reply भेजें",
+        "👁 Reviewed करें",
+        "✅ Resolved करें",
+        "🗑 शिकायत Delete करें"
+    )
+
+    androidx.appcompat.app.AlertDialog.Builder(this)
+        .setTitle("शिकायत का विवरण")
+        .setMessage(details)
+        .setItems(options) { _, position ->
+
+            when (position) {
+
+                0 -> {
+                    val replyField =
+                        android.widget.EditText(this).apply {
+                            hint = "अपना जवाब लिखें"
+                            minLines = 3
+                            gravity = android.view.Gravity.TOP
+                        }
+
+                    androidx.appcompat.app.AlertDialog.Builder(this)
+                        .setTitle("Admin Reply")
+                        .setView(replyField)
+                        .setPositiveButton("भेजें") { _, _ ->
+
+                            val answer =
+                                replyField.text.toString().trim()
+
+                            if (answer.isBlank()) {
+                                toast("जवाब खाली नहीं हो सकता")
+                                return@setPositiveButton
+                            }
+
+                            report.reference.update(
+                                mapOf(
+                                    "adminReply" to answer,
+                                    "status" to "reviewed",
+                                    "repliedAt" to
+                                        com.google.firebase.firestore.FieldValue.serverTimestamp()
+                                )
+                            ).addOnSuccessListener {
+                                toast("Admin Reply सेव हो गया")
+                                showGroupReportsManager()
+                            }.addOnFailureListener {
+                                toast("Reply सेव नहीं हुआ: ${it.localizedMessage}")
+                            }
+                        }
                         .setNegativeButton("रद्द करें", null)
                         .show()
                 }
 
-                1 -> updateGroupReportStatus(
-                    report,
-                    "reviewed"
-                )
+                1 -> updateGroupReportStatus(report, "reviewed")
 
-                2 -> updateGroupReportStatus(
-                    report,
-                    "resolved"
-                )
+                2 -> updateGroupReportStatus(report, "resolved")
 
                 3 -> {
-
                     androidx.appcompat.app.AlertDialog.Builder(this)
                         .setTitle("शिकायत Delete करें?")
                         .setMessage("क्या आप इस शिकायत को स्थायी रूप से हटाना चाहते हैं?")
@@ -547,6 +637,7 @@ private fun showGroupReportDetailsWithName(
         .setNegativeButton("वापस", null)
         .show()
 }
+
 // =====================================================
 // UPDATE REPORT STATUS
 // =====================================================
