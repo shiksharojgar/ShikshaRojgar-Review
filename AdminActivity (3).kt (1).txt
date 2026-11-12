@@ -419,6 +419,88 @@ private fun adminSectionNote(
         )
     }
 }
+
+
+// =====================================================
+// GROUP IMAGE POST SETTING
+// =====================================================
+
+private fun showGroupImagePostSetting() {
+
+    val imageSwitch = Switch(this).apply {
+        text = "ग्रुप में फोटो पोस्ट की अनुमति"
+        textSize = 16f
+        setPadding(dp(16), dp(12), dp(16), dp(12))
+        isEnabled = false
+    }
+
+    val box = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        setPadding(dp(18), dp(8), dp(18), dp(8))
+        addView(imageSwitch)
+    }
+
+    val dialog = AlertDialog.Builder(this)
+        .setTitle("🖼️ ग्रुप फोटो पोस्ट सेटिंग")
+        .setMessage("यहाँ से यूज़र के लिए ग्रुप में फोटो पोस्ट करने की सुविधा चालू या बंद करें।")
+        .setView(box)
+        .setNegativeButton("बंद करें", null)
+        .setPositiveButton("सेव करें", null)
+        .create()
+
+    db.document("group_config/main")
+        .get()
+        .addOnSuccessListener { document ->
+
+            imageSwitch.isChecked =
+                document.getBoolean("allowGroupImagePosts") ?: false
+
+            imageSwitch.isEnabled = true
+        }
+        .addOnFailureListener {
+            toast("सेटिंग लोड नहीं हुई।")
+        }
+
+    dialog.setOnShowListener {
+
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+            .setOnClickListener {
+
+                if (!imageSwitch.isEnabled) {
+                    toast("सेटिंग लोड होने की प्रतीक्षा करें।")
+                    return@setOnClickListener
+                }
+
+                imageSwitch.isEnabled = false
+
+                db.document("group_config/main")
+                    .set(
+                        mapOf(
+                            "allowGroupImagePosts" to imageSwitch.isChecked,
+                            "updatedAt" to
+                                com.google.firebase.firestore.FieldValue.serverTimestamp()
+                        ),
+                        com.google.firebase.firestore.SetOptions.merge()
+                    )
+                    .addOnSuccessListener {
+                        toast(
+                            if (imageSwitch.isChecked)
+                                "ग्रुप फोटो पोस्ट ON हो गई।"
+                            else
+                                "ग्रुप फोटो पोस्ट OFF हो गई।"
+                        )
+                        dialog.dismiss()
+                    }
+                    .addOnFailureListener { error ->
+                        imageSwitch.isEnabled = true
+                        toast("सेटिंग सेव नहीं हुई: ${error.message}")
+                    }
+            }
+    }
+
+    dialog.show()
+}
+
 // =====================================================
 // GROUP REPORTS ADMIN MANAGER
 // =====================================================
@@ -3646,6 +3728,24 @@ homeContent.addView(
                 GroupAdminActivity::class.java
             )
         )
+    },
+    LinearLayout.LayoutParams(
+        -1,
+        dp(48)
+    ).apply {
+        bottomMargin = dp(10)
+    }
+)
+
+// =====================================================
+// GROUP IMAGE POST ON / OFF
+// =====================================================
+
+homeContent.addView(
+    adminActionButton(
+        "🖼️ ग्रुप फोटो पोस्ट — ON / OFF"
+    ) {
+        showGroupImagePostSetting()
     },
     LinearLayout.LayoutParams(
         -1,
