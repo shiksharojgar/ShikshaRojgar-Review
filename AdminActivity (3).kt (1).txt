@@ -423,6 +423,7 @@ private fun adminSectionNote(
 // GROUP REPORTS ADMIN MANAGER
 // =====================================================
 
+
 private fun showGroupReportsManager() {
 
     db.collection("group_reports")
@@ -436,52 +437,280 @@ private fun showGroupReportsManager() {
             val reports = snapshot.documents
 
             if (reports.isEmpty()) {
-                android.widget.Toast.makeText(
-                    this,
-                    "अभी कोई शिकायत उपलब्ध नहीं है।",
-                    android.widget.Toast.LENGTH_SHORT
-                ).show()
+                toast("कोई शिकायत उपलब्ध नहीं है।")
                 return@addOnSuccessListener
             }
 
-            val items = reports.mapIndexed { index, doc ->
+            val scroll = android.widget.ScrollView(this)
 
-                val subject =
-                    doc.getString("subject") ?: "बिना विषय"
-
-                val status =
-                    doc.getString("status") ?: "open"
-
-                val statusText = when (status) {
-                    "reviewed" -> "देख ली गई"
-                    "resolved" -> "समाधान हो गया"
-                    else -> "नई शिकायत"
-                }
-
-                "${index + 1}. $subject\n$statusText"
+            val container = android.widget.LinearLayout(this).apply {
+                orientation = android.widget.LinearLayout.VERTICAL
+                setPadding(dp(12), dp(8), dp(12), dp(12))
             }
 
-            androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("📩 शिकायत एवं सुझाव (${reports.size})")
-                .setItems(items.toTypedArray()) { _, position ->
+            reports.forEachIndexed { index, report ->
 
-                    showGroupReportDetails(
-                        reports[position]
+                val subject =
+                    report.getString("subject") ?: "No Subject"
+
+                val message =
+                    report.getString("message") ?: ""
+
+                val status = when (report.getString("status")) {
+                    "reviewed" -> "Reviewed"
+                    "resolved" -> "Resolved"
+                    else -> "New"
+                }
+
+                val card = android.widget.LinearLayout(this).apply {
+                    orientation = android.widget.LinearLayout.VERTICAL
+                    setPadding(dp(12), dp(10), dp(12), dp(10))
+                    background =
+                        android.graphics.drawable.GradientDrawable().apply {
+                            setColor(android.graphics.Color.WHITE)
+                            setStroke(dp(1), android.graphics.Color.LTGRAY)
+                            cornerRadius = dp(10).toFloat()
+                        }
+                }
+
+                val title = android.widget.TextView(this).apply {
+                    text = "${index + 1}. $subject"
+                    textSize = 17f
+                    setTextColor(android.graphics.Color.BLACK)
+                }
+
+                val statusView = android.widget.TextView(this).apply {
+                    text = "Status: $status"
+                    textSize = 14f
+                    setTextColor(android.graphics.Color.DKGRAY)
+                    setPadding(0, dp(5), 0, dp(8))
+                }
+
+                card.addView(title)
+                card.addView(statusView)
+
+                fun makeActionButton(
+                    label: String,
+                    action: () -> Unit
+                ): android.widget.Button {
+                    return android.widget.Button(this).apply {
+                        text = label
+                        textSize = 12f
+                        setOnClickListener { action() }
+                    }
+                }
+
+                val firstRow = android.widget.LinearLayout(this).apply {
+                    orientation = android.widget.LinearLayout.HORIZONTAL
+                }
+
+                val secondRow = android.widget.LinearLayout(this).apply {
+                    orientation = android.widget.LinearLayout.HORIZONTAL
+                }
+
+                fun addAction(
+                    row: android.widget.LinearLayout,
+                    button: android.widget.Button
+                ) {
+                    row.addView(
+                        button,
+                        android.widget.LinearLayout.LayoutParams(
+                            0,
+                            dp(46),
+                            1f
+                        ).apply {
+                            setMargins(dp(3), dp(2), dp(3), dp(2))
+                        }
                     )
                 }
-                .setNegativeButton("बंद करें", null)
+
+                addAction(
+                    firstRow,
+                    makeActionButton("Reply") {
+                        showGroupReportReplyDialog(report)
+                    }
+                )
+
+                addAction(
+                    firstRow,
+                    makeActionButton("Reviewed") {
+                        updateGroupReportStatus(report, "reviewed")
+                    }
+                )
+
+                addAction(
+                    secondRow,
+                    makeActionButton("Resolved") {
+                        updateGroupReportStatus(report, "resolved")
+                    }
+                )
+
+                addAction(
+                    secondRow,
+                    makeActionButton("Delete") {
+                        androidx.appcompat.app.AlertDialog.Builder(this)
+                            .setTitle("Delete Complaint?")
+                            .setMessage(
+                                "Do you want to permanently delete this complaint?"
+                            )
+                            .setPositiveButton("Delete") { _, _ ->
+                                report.reference.delete()
+                                    .addOnSuccessListener {
+                                        toast("Complaint deleted")
+                                        showGroupReportsManager()
+                                    }
+                                    .addOnFailureListener {
+                                        toast("Delete failed: ${it.localizedMessage}")
+                                    }
+                            }
+                            .setNegativeButton("Cancel", null)
+                            .show()
+                    }
+                )
+
+                card.addView(firstRow)
+                card.addView(secondRow)
+
+                container.addView(
+                    card,
+                    android.widget.LinearLayout.LayoutParams(
+                        -1,
+                        -2
+                    ).apply {
+                        bottomMargin = dp(10)
+                    }
+                )
+            }
+
+            scroll.addView(container)
+
+            androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Complaints & Suggestions (${reports.size})")
+                .setView(scroll)
+                .setPositiveButton("Close", null)
                 .show()
         }
         .addOnFailureListener { error ->
-
-            android.widget.Toast.makeText(
-                this,
-                "शिकायतें लोड नहीं हुईं: ${error.localizedMessage}",
-                android.widget.Toast.LENGTH_LONG
-            ).show()
+            toast("Loading failed: ${error.localizedMessage}")
         }
 }
 
+
+
+private fun showGroupReportReplyDialog(
+    report: com.google.firebase.firestore.DocumentSnapshot
+) {
+    val subject = report.getString("subject") ?: ""
+    val message = report.getString("message") ?: ""
+    val suggestion =
+        report.getString("suggestedSolution") ?: ""
+
+    val replyField = android.widget.EditText(this).apply {
+        hint = "Write Admin Reply / Solution"
+        minLines = 3
+        gravity = android.view.Gravity.TOP
+    }
+
+    val content = android.widget.LinearLayout(this).apply {
+        orientation = android.widget.LinearLayout.VERTICAL
+        setPadding(dp(18), dp(8), dp(18), dp(4))
+    }
+
+    val complaintView = android.widget.TextView(this).apply {
+        text = """
+            Subject:
+            $subject
+
+            Complaint / Suggestion:
+            $message
+
+            User's Suggested Solution:
+            $suggestion
+
+            Admin Reply:
+        """.trimIndent()
+        textSize = 15f
+        setTextColor(android.graphics.Color.BLACK)
+    }
+
+    content.addView(complaintView)
+    content.addView(replyField)
+
+    androidx.appcompat.app.AlertDialog.Builder(this)
+        .setTitle("Admin Reply")
+        .setView(content)
+        .setPositiveButton("Send") { _, _ ->
+
+            val answer = replyField.text.toString().trim()
+
+            if (answer.isBlank()) {
+                toast("Reply cannot be empty")
+                return@setPositiveButton
+            }
+
+            report.reference.update(
+                mapOf(
+                    "adminReply" to answer,
+                    "status" to "reviewed",
+                    "repliedAt" to
+                        com.google.firebase.firestore.FieldValue.serverTimestamp()
+                )
+            ).addOnSuccessListener {
+
+                toast("Reply saved")
+
+                val publicBody = """
+                    📢 Shiksha Rojgar Admin Response
+
+                    Subject:
+                    $subject
+
+                    Complaint / Suggestion:
+                    $message
+
+                    User's Suggested Solution:
+                    $suggestion
+
+                    Solution / Admin Reply:
+                    $answer
+                """.trimIndent()
+
+                androidx.appcompat.app.AlertDialog.Builder(this)
+                    .setTitle("Share to Group?")
+                    .setMessage(publicBody)
+                    .setPositiveButton("Share to Group") { _, _ ->
+
+                        GroupRepository.submitPost(
+                            displayName = "Shiksha Rojgar Admin",
+                            body = publicBody
+                        ) { success, error ->
+
+                            runOnUiThread {
+                                if (success) {
+                                    toast("Post sent for Group Admin approval")
+                                } else {
+                                    toast(
+                                        "Share failed: " +
+                                            (error ?: "Unknown error")
+                                    )
+                                }
+
+                                showGroupReportsManager()
+                            }
+                        }
+                    }
+                    .setNegativeButton("Not Now") { _, _ ->
+                        showGroupReportsManager()
+                    }
+                    .show()
+
+            }.addOnFailureListener {
+                toast("Reply failed: ${it.localizedMessage}")
+            }
+        }
+        .setNegativeButton("Cancel", null)
+        .show()
+}
 
 // =====================================================
 // SINGLE REPORT DETAILS WITH USER NAME
