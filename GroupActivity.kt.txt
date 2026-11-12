@@ -1,6 +1,7 @@
 package com.shiksharojgar.app
 
 import android.app.Activity
+import android.app.Dialog
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
@@ -998,6 +999,7 @@ if (post.imageUrl.isNotBlank()) {
         maxHeight = dp(280)
         scaleType = ImageView.ScaleType.FIT_CENTER
         visibility = View.GONE
+        isClickable = true
     }
 
     card.addView(postImage)
@@ -1009,6 +1011,39 @@ if (post.imageUrl.isNotBlank()) {
             if (bitmap != null) {
                 postImage.setImageBitmap(bitmap)
                 postImage.visibility = View.VISIBLE
+
+                // फोटो पर टैप करने से बड़ी स्क्रीन खुलेगी।
+                postImage.setOnClickListener {
+
+                    val zoomDialog = Dialog(
+                        this@GroupActivity
+                    )
+
+                    val zoomImage = ImageView(
+                        this@GroupActivity
+                    ).apply {
+                        setImageBitmap(bitmap)
+                        scaleType =
+                            ImageView.ScaleType.FIT_CENTER
+                        setBackgroundColor(Color.BLACK)
+                        adjustViewBounds = true
+                        setOnClickListener {
+                            zoomDialog.dismiss()
+                        }
+                    }
+
+                    zoomDialog.setContentView(zoomImage)
+                    zoomDialog.show()
+
+                    zoomDialog.window?.setLayout(
+                        -1,
+                        -1
+                    )
+
+                    zoomDialog.window?.setBackgroundDrawableResource(
+                        android.R.color.black
+                    )
+                }
             }
         }
     }
