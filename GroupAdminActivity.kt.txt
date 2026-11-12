@@ -4,6 +4,8 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
 import android.view.Gravity
+import android.widget.ImageView
+import android.view.View
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -267,6 +269,7 @@ private fun loadApprovedPosts() {
                     uid = doc.getString("uid").orEmpty(),
                     displayName = doc.getString("displayName").orEmpty(),
                     body = doc.getString("body").orEmpty(),
+imageUrl = doc.getString("imageUrl").orEmpty(),
                     status = doc.getString("status") ?: "approved",
                     createdAt = doc.getTimestamp("createdAt")
                         ?.toDate()?.time ?: 0L,
@@ -311,6 +314,28 @@ private fun loadApprovedPosts() {
         }
 
         card.addView(name)
+if (post.imageUrl.isNotBlank()) {
+
+    val postImage = ImageView(this).apply {
+        adjustViewBounds = true
+        maxHeight = dp(240)
+        scaleType = ImageView.ScaleType.FIT_CENTER
+        visibility = View.GONE
+    }
+
+    card.addView(postImage)
+
+    ChannelRepository.loadImage(post.imageUrl) {
+        bitmap, error ->
+
+        runOnUiThread {
+            if (bitmap != null) {
+                postImage.setImageBitmap(bitmap)
+                postImage.visibility = View.VISIBLE
+            }
+        }
+    }
+}
 
         val body = TextView(this).apply {
             text = post.body
