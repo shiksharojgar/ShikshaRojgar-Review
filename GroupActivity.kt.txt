@@ -845,7 +845,7 @@ if (!initialPostsPositioned) {
         val titleView = TextView(this).apply {
 autoLinkMask = Linkify.WEB_URLS
 linksClickable = true
-linkTextColor = Color.rgb(25, 118, 210)
+setLinkTextColor(Color.rgb(25, 118, 210))
 movementMethod = LinkMovementMethod.getInstance()
             text = titleText
             textSize = 17f
@@ -858,7 +858,7 @@ movementMethod = LinkMovementMethod.getInstance()
 
         if (remainingBody.isNotBlank()) {
             val body = TextView(this).apply {
-linkTextColor = Color.rgb(25, 118, 210)
+setLinkTextColor(Color.rgb(25, 118, 210))
 linksClickable = true
                 text = remainingBody
                 textSize = 15f
