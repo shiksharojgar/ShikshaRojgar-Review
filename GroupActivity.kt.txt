@@ -1164,14 +1164,7 @@ linksClickable = true
                 }
             )
 
-            actions.addView(
-                reportPostButton,
-                LinearLayout.LayoutParams(
-                    0,
-                    -2,
-                    1f
-                )
-            )
+            
 
                         // शुरुआती Like काउंट पढ़ें।
             db.collection("group_posts")
@@ -1308,7 +1301,7 @@ linksClickable = true
                     this@GroupActivity,
                     "शिक्षा रोजगार ग्रुप पोस्ट",
                     shareText,
-                    post.imageUrl.takeIf { it.isNotBlank() },
+                    post.imageUrl.takeIf { it.isNotBlank() }.orEmpty(),
                     chooserTitle = "Shiksha Rojgar पर शेयर करें"
                 )
 
