@@ -675,8 +675,13 @@ if (!user.isEmailVerified) {
                     posts.forEach { post ->
 if (!initialPostsPositioned) {
     postsScrollView.post {
-        postsScrollView.fullScroll(View.FOCUS_DOWN)
-        initialPostsPositioned = true
+        postsScrollView.post {
+            val contentHeight =
+                postsScrollView.getChildAt(0)?.height ?: 0
+
+            postsScrollView.scrollTo(0, contentHeight)
+            initialPostsPositioned = true
+        }
     }
 }
                         addPostCard(postsContainer, post, false)
