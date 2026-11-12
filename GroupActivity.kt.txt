@@ -11,6 +11,8 @@ import android.text.method.LinkMovementMethod
 import android.text.util.Linkify
 import android.view.Gravity
 import android.view.View
+import android.net.Uri
+import android.widget.ImageView
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
@@ -45,6 +47,22 @@ private lateinit var memberCountView: TextView
     
     private var feedStarted = false
 private var pendingJoinAfterLogin = false
+private var allowGroupImagePosts = false
+private var selectedGroupImageUri: Uri? = null
+private var groupImagePreview: ImageView? = null
+
+private val groupImagePicker =
+    registerForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            selectedGroupImageUri = uri
+            groupImagePreview?.apply {
+                setImageURI(uri)
+                visibility = View.VISIBLE
+            }
+        }
+    }
 
     private val loginLauncher =
     registerForActivityResult(
@@ -100,6 +118,9 @@ private fun listenToMemberCount() {
 
             val count =
                 snapshot?.getLong("memberCount") ?: 0L
+
+allowGroupImagePosts =
+    snapshot?.getBoolean("allowGroupImagePosts") ?: false
 
             memberCountView.text =
                 "👥 ${String.format(Locale.US, "%,d", count)} Members"
