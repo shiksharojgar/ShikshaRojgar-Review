@@ -349,17 +349,49 @@ onShare = {
             }
         }
 
-        root.addView(loginButton, buttonParams())
-root.addView(reportButton, buttonParams())
-
         val myReportsButton = Button(this).apply {
-            text = "📬 मेरी शिकायतें / Admin के जवाब"
-            setOnClickListener {
-                showMyReports()
-            }
-        }
+    text = "📬 मेरी शिकायतें / सुझाव / जवाब"
+    setOnClickListener {
+        showMyReports()
+    }
+}
 
-        root.addView(myReportsButton, buttonParams())
+// तीनों बटन की एक Horizontal Row
+val userActionRow = LinearLayout(this).apply {
+    orientation = LinearLayout.HORIZONTAL
+    gravity = Gravity.CENTER
+    setPadding(dp(4), dp(2), dp(4), dp(4))
+}
+
+// तीनों बटन की समान चौड़ाई और छोटा आकार
+listOf(loginButton, reportButton, myReportsButton).forEach { button ->
+    button.apply {
+        textSize = 11f
+        isAllCaps = false
+        minWidth = 0
+        maxLines = 2
+        setPadding(dp(2), dp(4), dp(2), dp(4))
+    }
+
+    userActionRow.addView(
+        button,
+        LinearLayout.LayoutParams(
+            0,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            1f
+        ).apply {
+            setMargins(dp(2), 0, dp(2), 0)
+        }
+    )
+}
+
+root.addView(
+    userActionRow,
+    LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams.MATCH_PARENT,
+        LinearLayout.LayoutParams.WRAP_CONTENT
+    )
+)
 
         statusView = TextView(this).apply {
             text = "पोस्ट लोड हो रही हैं..."
