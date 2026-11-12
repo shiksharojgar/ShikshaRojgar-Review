@@ -4,6 +4,9 @@ import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.provider.OpenableColumns
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import java.io.ByteArrayOutputStream
 import com.google.firebase.FirebaseApp
 import com.google.firebase.firestore.Blob
 import com.google.android.gms.tasks.Tasks
@@ -183,6 +186,73 @@ fun uploadGroupImage(
                     null,
                     e.localizedMessage
                         ?: "फोटो अपलोड नहीं हो सकी।"
+                )
+            }
+        }
+    }.start()
+}
+
+fun loadImage(
+    mediaUrl: String,
+    done: (Bitmap?, String?) -> Unit
+) {
+    val prefix = "firestore-group-media://"
+
+    if (!mediaUrl.startsWith(prefix)) {
+        done(null, "ग्रुप फोटो का लिंक सही नहीं है।")
+        return
+    }
+
+    val mediaId = mediaUrl.removePrefix(prefix).trim()
+
+    if (mediaId.isBlank()) {
+        done(null, "फोटो उपलब्ध नहीं है।")
+        return
+    }
+
+    Thread {
+        try {
+            val mediaRef = db.collection("group_media")
+                .document(mediaId)
+
+            val snapshot = Tasks.await(
+                mediaRef.collection("chunks")
+                    .orderBy("index")
+                    .get(),
+                60,
+                TimeUnit.SECONDS
+            )
+
+            val output = ByteArrayOutputStream()
+
+            for (document in snapshot.documents) {
+                val blob = document.getBlob("data")
+                    ?: continue
+
+                output.write(blob.toBytes())
+            }
+
+            val imageBytes = output.toByteArray()
+
+            if (imageBytes.isEmpty()) {
+                throw IllegalStateException("फोटो डेटा नहीं मिला।")
+            }
+
+            val bitmap = BitmapFactory.decodeByteArray(
+                imageBytes,
+                0,
+                imageBytes.size
+            ) ?: throw IllegalStateException("फोटो खुल नहीं सकी।")
+
+            Handler(Looper.getMainLooper()).post {
+                done(bitmap, null)
+            }
+
+        } catch (e: Exception) {
+            Handler(Looper.getMainLooper()).post {
+                done(
+                    null,
+                    e.localizedMessage ?: "फोटो लोड नहीं हो सकी।"
                 )
             }
         }
