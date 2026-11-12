@@ -605,21 +605,66 @@ if (!user.isEmailVerified) {
             filters = arrayOf(InputFilter.LengthFilter(5000))
         }
 
+val mobileView = TextView(this).apply {
+    text = "📱 मोबाइल नंबर: लोड हो रहा है..."
+    textSize = 14f
+    setTextColor(Color.DKGRAY)
+    setPadding(0, dp(8), 0, dp(8))
+}
+
+val galleryButton = Button(this).apply {
+    text = "🖼️ गैलरी से फोटो चुनें"
+    visibility =
+        if (allowGroupImagePosts) View.VISIBLE else View.GONE
+
+    setOnClickListener {
+        groupImagePicker.launch("image/*")
+    }
+}
+
+selectedGroupImageUri = null
+
+val imagePreview = ImageView(this).apply {
+    visibility = View.GONE
+    adjustViewBounds = true
+    maxHeight = dp(220)
+    scaleType = ImageView.ScaleType.FIT_CENTER
+}
+groupImagePreview = imagePreview
+
         val box = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(20), dp(8), dp(20), 0)
-            addView(nameInput)
-            addView(bodyInput)
-        }
+    orientation = LinearLayout.VERTICAL
+    setPadding(dp(20), dp(8), dp(20), 0)
+
+    addView(nameInput)
+    addView(mobileView)
+    addView(galleryButton)
+    addView(imagePreview)
+    addView(bodyInput)
+}
 
         db.collection("group_profiles")
-            .document(user.uid)
-            .get()
-            .addOnSuccessListener { document ->
-                nameInput.setText(
-                    document.getString("displayName").orEmpty()
-                )
+    .document(user.uid)
+    .get()
+    .addOnSuccessListener { document ->
+
+        nameInput.setText(
+            document.getString("displayName").orEmpty()
+        )
+
+        val mobile =
+            document.getString("mobileNumber").orEmpty()
+
+        mobileView.text =
+            if (mobile.isNotBlank()) {
+                "📱 मोबाइल नंबर: $mobile"
+            } else {
+                "📱 मोबाइल नंबर: उपलब्ध नहीं"
             }
+    }
+    .addOnFailureListener {
+        mobileView.text = "📱 मोबाइल नंबर: लोड नहीं हुआ"
+    }
 
         val dialog = AlertDialog.Builder(this)
             .setTitle("नई ग्रुप पोस्ट")
@@ -633,33 +678,83 @@ if (!user.isEmailVerified) {
 
         dialog.setOnShowListener {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE)
-                .setOnClickListener {
-                    val name = nameInput.text.toString().trim()
-                    val body = bodyInput.text.toString().trim()
+    .setOnClickListener {
 
-                    if (name.isBlank() || name.length > 40) {
-                        toast("नाम 1 से 40 अक्षरों के बीच रखें।")
-                        return@setOnClickListener
-                    }
+        val name = nameInput.text.toString().trim()
+        val body = bodyInput.text.toString().trim()
+        val imageUri = selectedGroupImageUri
 
-                    if (body.isBlank() || body.length > 5000) {
-                        toast("पोस्ट 1 से 5000 अक्षरों के बीच लिखें।")
-                        return@setOnClickListener
-                    }
+        if (name.isBlank() || name.length > 40) {
+            toast("नाम 1 से 40 अक्षरों के बीच रखें।")
+            return@setOnClickListener
+        }
 
-                    GroupRepository.submitPost(name, body) {
-                            success, error ->
-                        if (success) {
-                            toast(
-                                "पोस्ट भेज दी गई है। Admin की मंजूरी के बाद दिखेगी।"
-                            )
-                            dialog.dismiss()
-                            loadMyPendingPosts()
-                        } else {
-                            toast(error ?: "पोस्ट नहीं भेजी जा सकी।")
-                        }
-                    }
+        if (body.length > 5000) {
+            toast("पोस्ट 5000 अक्षरों से अधिक नहीं हो सकती।")
+            return@setOnClickListener
+        }
+
+        if (body.isBlank() && imageUri == null) {
+            toast("पोस्ट में टेक्स्ट या फोटो जरूर जोड़ें।")
+            return@setOnClickListener
+        }
+
+        val submitButton =
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+
+        submitButton.isEnabled = false
+        submitButton.text = "कृपया प्रतीक्षा करें..."
+
+        fun submitGroupPost(imageUrl: String) {
+            GroupRepository.submitPost(
+                name,
+                body,
+                imageUrl
+            ) { success, error ->
+
+                if (success) {
+                    toast(
+                        "पोस्ट भेज दी गई है। Admin की मंजूरी के बाद दिखेगी।"
+                    )
+                    selectedGroupImageUri = null
+                    groupImagePreview = null
+                    dialog.dismiss()
+                    loadMyPendingPosts()
+                } else {
+                    submitButton.isEnabled = true
+                    submitButton.text = "पोस्ट भेजें"
+                    toast(error ?: "पोस्ट नहीं भेजी जा सकी।")
                 }
+            }
+        }
+
+        if (imageUri != null) {
+
+            if (!allowGroupImagePosts) {
+                submitButton.isEnabled = true
+                submitButton.text = "पोस्ट भेजें"
+                toast("फोटो पोस्ट की सुविधा अभी बंद है।")
+                return@setOnClickListener
+            }
+
+            ChannelRepository.upload(
+                imageUri,
+                folder = "images"
+            ) { mediaRef, error ->
+
+                if (error != null || mediaRef.isNullOrBlank()) {
+                    submitButton.isEnabled = true
+                    submitButton.text = "पोस्ट भेजें"
+                    toast(error ?: "फोटो अपलोड नहीं हो सकी।")
+                } else {
+                    submitGroupPost(mediaRef)
+                }
+            }
+
+        } else {
+            submitGroupPost("")
+        }
+    }
         }
 
         dialog.show()
