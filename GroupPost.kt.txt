@@ -5,6 +5,9 @@ data class GroupPost(
     val uid: String = "",
     val displayName: String = "",
     val body: String = "",
+
+val imageUrl: String = "",
+
     val status: String = "pending",
     val createdAt: Long = 0L,
     val approvedAt: Long = 0L,
