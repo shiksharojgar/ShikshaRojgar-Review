@@ -1,5 +1,14 @@
 package com.shiksharojgar.app
 
+import android.net.Uri
+import android.os.Handler
+import android.os.Looper
+import android.provider.OpenableColumns
+import com.google.firebase.FirebaseApp
+import com.google.firebase.firestore.Blob
+import com.google.android.gms.tasks.Tasks
+import java.util.UUID
+import java.util.concurrent.TimeUnit
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -10,6 +19,176 @@ import java.util.Date
 object GroupRepository {
 
     private val db = FirebaseFirestore.getInstance()
+
+fun uploadGroupImage(
+    uri: Uri,
+    done: (String?, String?) -> Unit
+) {
+    val user = auth.currentUser
+
+    if (
+        user == null ||
+        user.isAnonymous ||
+        !user.isEmailVerified
+    ) {
+        done(null, "सत्यापित लॉगिन जरूरी है।")
+        return
+    }
+
+    Thread {
+        try {
+            val context =
+                FirebaseApp.getInstance().applicationContext
+
+            val resolver = context.contentResolver
+
+            val mime =
+                resolver.getType(uri) ?: ""
+
+            if (!mime.startsWith("image/")) {
+                throw IllegalArgumentException(
+                    "केवल फोटो अपलोड कर सकते हैं।"
+                )
+            }
+
+            var fileName = "group_image"
+            var fileSize = 0L
+
+            resolver.query(
+                uri,
+                arrayOf(
+                    OpenableColumns.DISPLAY_NAME,
+                    OpenableColumns.SIZE
+                ),
+                null,
+                null,
+                null
+            )?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val nameIndex =
+                        cursor.getColumnIndex(
+                            OpenableColumns.DISPLAY_NAME
+                        )
+                    val sizeIndex =
+                        cursor.getColumnIndex(
+                            OpenableColumns.SIZE
+                        )
+
+                    if (nameIndex >= 0) {
+                        fileName =
+                            cursor.getString(nameIndex)
+                                ?: fileName
+                    }
+
+                    if (sizeIndex >= 0) {
+                        fileSize =
+                            cursor.getLong(sizeIndex)
+                    }
+                }
+            }
+
+            val maxBytes =
+                20L * 1024L * 1024L
+
+            if (fileSize > maxBytes) {
+                throw IllegalArgumentException(
+                    "फोटो 20 MB से बड़ी नहीं होनी चाहिए।"
+                )
+            }
+
+            val mediaId =
+                "${System.currentTimeMillis()}_${UUID.randomUUID()}"
+
+            val mediaRef =
+                db.collection("channel_media")
+                    .document(mediaId)
+
+            val metadata =
+                hashMapOf<String, Any>(
+                    "mediaId" to mediaId,
+                    "ownerUid" to user.uid,
+                    "mimeType" to mime,
+                    "fileName" to fileName,
+                    "size" to fileSize,
+                    "folder" to "group_images",
+                    "createdAt" to System.currentTimeMillis()
+                )
+
+            Tasks.await(
+                mediaRef.set(metadata),
+                60,
+                TimeUnit.SECONDS
+            )
+
+            resolver.openInputStream(uri)?.use { input ->
+
+                val buffer =
+                    ByteArray(700 * 1024)
+
+                var index = 0
+                var totalBytes = 0L
+
+                while (true) {
+                    val read = input.read(buffer)
+
+                    if (read <= 0) break
+
+                    totalBytes += read
+
+                    if (totalBytes > maxBytes) {
+                        throw IllegalArgumentException(
+                            "फोटो 20 MB से बड़ी है।"
+                        )
+                    }
+
+                    val bytes =
+                        buffer.copyOf(read)
+
+                    Tasks.await(
+                        mediaRef
+                            .collection("chunks")
+                            .document(index.toString())
+                            .set(
+                                mapOf(
+                                    "index" to index,
+                                    "data" to Blob.fromBytes(bytes)
+                                )
+                            ),
+                        120,
+                        TimeUnit.SECONDS
+                    )
+
+                    index++
+                }
+
+                if (index == 0) {
+                    throw IllegalArgumentException(
+                        "फोटो खाली है।"
+                    )
+                }
+            } ?: throw IllegalArgumentException(
+                "फोटो पढ़ी नहीं जा सकी।"
+            )
+
+            Handler(Looper.getMainLooper()).post {
+                done(
+                    "firestore-media://$mediaId",
+                    null
+                )
+            }
+
+        } catch (e: Exception) {
+            Handler(Looper.getMainLooper()).post {
+                done(
+                    null,
+                    e.localizedMessage
+                        ?: "फोटो अपलोड नहीं हो सकी।"
+                )
+            }
+        }
+    }.start()
+}
+
     private val auth = FirebaseAuth.getInstance()
 
     private val postsRef
