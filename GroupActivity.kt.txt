@@ -737,10 +737,9 @@ groupImagePreview = imagePreview
                 return@setOnClickListener
             }
 
-            ChannelRepository.upload(
-                imageUri,
-                folder = "group_images"
-            ) { mediaRef, error ->
+            GroupRepository.uploadGroupImage(
+    imageUri
+) { mediaRef, error ->
 
                 if (error != null || mediaRef.isNullOrBlank()) {
                     submitButton.isEnabled = true
