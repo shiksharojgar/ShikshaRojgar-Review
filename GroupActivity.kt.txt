@@ -879,6 +879,7 @@ if (!initialPostsPositioned) {
                         uid = document.getString("uid").orEmpty(),
                         displayName = document.getString("displayName").orEmpty(),
                         body = document.getString("body").orEmpty(),
+imageUrl = document.getString("imageUrl").orEmpty(),
                         status = document.getString("status") ?: "pending",
                         createdAt = document.getTimestamp("createdAt")
                             ?.toDate()?.time ?: 0L
@@ -990,6 +991,29 @@ if (!initialPostsPositioned) {
 
         card.addView(date)
 
+
+if (post.imageUrl.isNotBlank()) {
+
+    val postImage = ImageView(this).apply {
+        adjustViewBounds = true
+        maxHeight = dp(280)
+        scaleType = ImageView.ScaleType.FIT_CENTER
+        visibility = View.GONE
+    }
+
+    card.addView(postImage)
+
+    ChannelRepository.loadImage(post.imageUrl) {
+        bitmap, error ->
+
+        runOnUiThread {
+            if (bitmap != null) {
+                postImage.setImageBitmap(bitmap)
+                postImage.visibility = View.VISIBLE
+            }
+        }
+    }
+}
         // पहली लाइन को शीर्षक और शेष टेक्स्ट को विवरण मानें।
         val lines = post.body.lines()
         val titleText = lines.firstOrNull().orEmpty()
