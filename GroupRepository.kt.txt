@@ -172,9 +172,9 @@ fun uploadGroupImage(
 
             Handler(Looper.getMainLooper()).post {
                 done(
-                    "firestore-group-media://$mediaId"
-                    null
-                )
+    "firestore-group-media://$mediaId",
+    null
+)
             }
 
         } catch (e: Exception) {
