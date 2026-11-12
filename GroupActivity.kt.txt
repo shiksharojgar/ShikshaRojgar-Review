@@ -1002,7 +1002,7 @@ if (post.imageUrl.isNotBlank()) {
 
     card.addView(postImage)
 
-    ChannelRepository.loadImage(post.imageUrl) {
+    GroupRepository.loadImage(post.imageUrl) {
         bitmap, error ->
 
         runOnUiThread {
