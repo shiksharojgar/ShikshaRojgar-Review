@@ -69,10 +69,12 @@ val cleanImageUrl = imageUrl.trim()
             return
         }
 
-        if (cleanBody.isBlank() || cleanBody.length > 5000) {
-            done(false, "पोस्ट 1 से 5000 अक्षरों के बीच रखें।")
-            return
-        }
+        if (cleanBody.length > 5000 ||
+    (cleanBody.isBlank() && cleanImageUrl.isBlank())
+) {
+    done(false, "पोस्ट में टेक्स्ट या फोटो जरूर जोड़ें।")
+    return
+}
 
         user.reload()
             .addOnSuccessListener {
