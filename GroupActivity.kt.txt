@@ -1057,7 +1057,7 @@ linksClickable = true
         
                 // --------------------------------------------
         // GROUP POST ACTION BUTTONS
-        // Like + Share + Complaint
+        // Like + Share 
         // --------------------------------------------
 
         val actions = LinearLayout(this).apply {
