@@ -38,6 +38,8 @@ class GroupActivity : AppCompatActivity() {
     private lateinit var writeButton: Button
     private lateinit var reportButton: Button
     private lateinit var postsContainer: LinearLayout
+private lateinit var postsScrollView: ScrollView
+private var initialPostsPositioned = false
     private lateinit var pendingContainer: LinearLayout
 private lateinit var memberCountView: TextView
     
@@ -368,7 +370,7 @@ root.addView(reportButton, buttonParams())
 
         root.addView(statusView)
 
-        val scroll = ScrollView(this)
+        postsScrollView = ScrollView(this)
 
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -389,10 +391,10 @@ root.addView(reportButton, buttonParams())
         }
 
         content.addView(postsContainer)
-        scroll.addView(content)
+        postsScrollView.addView(content)
 
         root.addView(
-            scroll,
+            postsScrollView,
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 0,
@@ -671,6 +673,12 @@ if (!user.isEmailVerified) {
                     )
                 } else {
                     posts.forEach { post ->
+if (!initialPostsPositioned) {
+    postsScrollView.post {
+        postsScrollView.fullScroll(View.FOCUS_DOWN)
+        initialPostsPositioned = true
+    }
+}
                         addPostCard(postsContainer, post, false)
                     }
                 }
@@ -835,6 +843,10 @@ if (!user.isEmailVerified) {
         val remainingBody = lines.drop(1).joinToString("\n").trim()
 
         val titleView = TextView(this).apply {
+autoLinkMask = Linkify.WEB_URLS
+linksClickable = true
+linkTextColor = Color.rgb(25, 118, 210)
+movementMethod = LinkMovementMethod.getInstance()
             text = titleText
             textSize = 17f
             typeface = Typeface.DEFAULT_BOLD
@@ -846,6 +858,8 @@ if (!user.isEmailVerified) {
 
         if (remainingBody.isNotBlank()) {
             val body = TextView(this).apply {
+linkTextColor = Color.rgb(25, 118, 210)
+linksClickable = true
                 text = remainingBody
                 textSize = 15f
                 setTextColor(Color.rgb(31, 41, 55))
