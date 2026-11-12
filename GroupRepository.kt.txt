@@ -40,12 +40,14 @@ object GroupRepository {
     // --------------------------------------------------
 
         fun submitPost(
-        displayName: String,
-        body: String,
-        done: (Boolean, String?) -> Unit
-    ) {
+    displayName: String,
+    body: String,
+    imageUrl: String = "",
+    done: (Boolean, String?) -> Unit
+) {
         val user = auth.currentUser
         val cleanName = displayName.trim()
+val cleanImageUrl = imageUrl.trim()
         val cleanBody = body.trim()
 
         if (user == null) {
@@ -115,12 +117,16 @@ object GroupRepository {
                         }
 
                         val data = hashMapOf<String, Any>(
-                            "uid" to user.uid,
-                            "displayName" to cleanName,
-                            "body" to cleanBody,
-                            "status" to "pending",
-                            "createdAt" to FieldValue.serverTimestamp()
-                        )
+    "uid" to user.uid,
+    "displayName" to cleanName,
+    "body" to cleanBody,
+    "status" to "pending",
+    "createdAt" to FieldValue.serverTimestamp()
+)
+
+if (cleanImageUrl.isNotBlank()) {
+    data["imageUrl"] = cleanImageUrl
+}
 
                         postsRef.add(data)
                             .addOnSuccessListener {
@@ -179,6 +185,7 @@ object GroupRepository {
 
                     GroupPost(
                         id = doc.id,
+imageUrl = doc.getString("imageUrl").orEmpty(),
                         uid = doc.getString("uid").orEmpty(),
                         displayName = doc.getString("displayName").orEmpty(),
                         body = doc.getString("body").orEmpty(),
@@ -230,6 +237,7 @@ object GroupRepository {
                 onResult(
                     GroupPost(
                         id = doc.id,
+imageUrl = doc.getString("imageUrl").orEmpty(),
                         uid = doc.getString("uid").orEmpty(),
                         displayName = doc.getString("displayName").orEmpty(),
                         body = doc.getString("body").orEmpty(),
@@ -260,6 +268,7 @@ object GroupRepository {
                 val posts = snapshot.documents.map { doc ->
     GroupPost(
         id = doc.id,
+imageUrl = doc.getString("imageUrl").orEmpty(),
         uid = doc.getString("uid").orEmpty(),
         displayName = doc.getString("displayName").orEmpty(),
         body = doc.getString("body").orEmpty(),
