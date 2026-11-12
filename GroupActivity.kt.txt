@@ -1147,20 +1147,27 @@ if (!user.isEmailVerified) {
                     return@loadMyReports
                 }
 
-                val items = reports.mapIndexed { index, report ->
+                
+val items = reports.mapIndexed { index, report ->
 
-                    val subject =
-                        report.getString("subject") ?: "बिना विषय"
+    val subject =
+        report.getString("subject") ?: "बिना विषय"
 
-                    val status =
-                        when (report.getString("status")) {
-                            "reviewed" -> "👁 देख ली गई"
-                            "resolved" -> "✅ समाधान हो गया"
-                            else -> "🕒 नई शिकायत"
-                        }
+    val status =
+        when (report.getString("status")) {
+            "reviewed" -> "👁 देख ली गई"
+            "resolved" -> "✅ समाधान हो गया"
+            else -> "🕒 नई शिकायत"
+        }
 
-                    "${index + 1}. $subject\n$status"
-                }
+    val reply =
+        report.getString("adminReply")
+            ?.takeIf { it.isNotBlank() }
+            ?: "अभी Admin का जवाब नहीं आया है।"
+
+    "${index + 1}. $subject\n$status\n✉️ Admin Reply: $reply"
+}
+
 
                 AlertDialog.Builder(this)
                     .setTitle("📬 मेरी शिकायतें (${reports.size})")
