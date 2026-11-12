@@ -100,7 +100,7 @@ fun uploadGroupImage(
                 "${System.currentTimeMillis()}_${UUID.randomUUID()}"
 
             val mediaRef =
-                db.collection("channel_media")
+                db.collection("group_media")
                     .document(mediaId)
 
             val metadata =
@@ -172,7 +172,7 @@ fun uploadGroupImage(
 
             Handler(Looper.getMainLooper()).post {
                 done(
-                    "firestore-media://$mediaId",
+                    "firestore-group-media://$mediaId"
                     null
                 )
             }
