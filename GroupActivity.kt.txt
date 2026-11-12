@@ -1105,17 +1105,7 @@ linksClickable = true
                 setPadding(dp(2), 0, dp(2), 0)
             }
 
-            val reportPostButton = Button(this).apply {
-                text = "⚑ शिकायत"
-                textSize = 12f
-                isAllCaps = false
-                minWidth = 0
-                setPadding(dp(2), 0, dp(2), 0)
-
-                setOnClickListener {
-                    openReportDialog(post.id)
-                }
-            }
+            
 
             // तीनों बटन मोबाइल में बराबर जगह लेंगे।
             val actionParams = LinearLayout.LayoutParams(
