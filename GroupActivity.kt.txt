@@ -739,7 +739,7 @@ groupImagePreview = imagePreview
 
             ChannelRepository.upload(
                 imageUri,
-                folder = "images"
+                folder = "group_images"
             ) { mediaRef, error ->
 
                 if (error != null || mediaRef.isNullOrBlank()) {
