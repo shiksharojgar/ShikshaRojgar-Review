@@ -1243,24 +1243,50 @@ linksClickable = true
             // Share
             shareButton.setOnClickListener {
 
-                val shareText =
-                    "*📱 Shiksha Rojgar App  👥 शिक्षा रोजगार ग्रुप*\n\n" +
-                    "*पोस्ट देखें 👇*\n" +
-                    "https://shiksha-rojgar.web.app/group?post=${post.id}\n\n" +
-                    "*पोस्ट की जानकारी:*\n" +
-                    "${post.body}\n\n" +
-                    "*📅 तारीख और समय: $dateText*\n\n" +
-                    "*✅ शिक्षा रोजगार की Official Website 🌐*\n" +
-                    "https://www.shiksharojgar.com/\n" +
-                    "*☝️ यहां क्लिक करके 📱 Shiksha Rojgar App डाउनलोड इंस्टॉल करें !*"
+                
+                val postLines = post.body.lines()
+                val postTitle = postLines.firstOrNull()
+                    ?.trim().orEmpty()
 
-                // मौजूदा शेयर सुविधा चालू रखें।
+                val postDescription = postLines
+                    .drop(1)
+                    .joinToString("\n")
+                    .trim()
+
+                val postLink =
+                    "https://shiksha-rojgar.web.app/group?post=${post.id}"
+
+                val shareText = buildString {
+
+                    append("*📱 Shiksha Rojgar App 👥 शिक्षा रोजगार ग्रुप*\n\n")
+
+                    append("*पोस्ट देखें 👇*\n")
+                    append("$postLink\n\n")
+
+                    append("*📌 पोस्ट का टाइटल:*\n")
+                    append("$postTitle\n\n")
+
+                    if (postDescription.isNotBlank()) {
+                        append("*📝 पूरा विवरण:*\n")
+                        append("$postDescription\n\n")
+                    }
+
+                    append("*🌐 Official Website:*\n")
+                    append("https://www.shiksharojgar.com/\n\n")
+
+                    append("*📲 Shiksha Rojgar App डाउनलोड करें:*\n")
+                    append("https://shiksharojgar.com/2026/09/shiksha-rojgar-android-app-latest.html")
+                }
+
+                // फोटो और पूरा पोस्ट शेयर करें।
                 ShareHelper.shareImageOrText(
                     this@GroupActivity,
                     "शिक्षा रोजगार ग्रुप पोस्ट",
                     shareText,
+                    post.imageUrl.takeIf { it.isNotBlank() },
                     chooserTitle = "Shiksha Rojgar पर शेयर करें"
                 )
+
 
                 // शेयर काउंट अपडेट करने का प्रयास करें।
                 GroupRepository.recordShare(post.id) {
