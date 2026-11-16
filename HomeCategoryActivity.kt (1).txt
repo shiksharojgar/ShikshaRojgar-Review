@@ -138,6 +138,7 @@ val routeCategoryId = when (route) {
     "study-material" -> "study_material"
     "career-guide" -> "career_guide"
     "admit-card" -> "admit_card"
+    "jan-upyogi" -> "jan_upyogi"
     else -> route
 }
 
@@ -156,6 +157,7 @@ val categoryName = intent.getStringExtra("categoryName")
         "important_information" -> "Important Information"
         "career_guide" -> "Career Guide"
         "study_material" -> "Study Material"
+    "jan_upyogi" -> "जन उपयोगी जानकारी"
         else -> "Category"
     }
 
@@ -1408,6 +1410,7 @@ shareButton.setOnClickListener {
         "important_information" -> "important-information"
         "study_material" -> "study-material"
         "career", "career_guide" -> "career-guide"
+    "jan_upyogi" -> "jan-upyogi"
         else -> categoryId.lowercase()
     }
 
@@ -1421,6 +1424,7 @@ shareButton.setOnClickListener {
         "vacancy" -> "Vacancy"
         "result" -> "Result"
         "admit_card" -> "Admit Card"
+    "jan_upyogi" -> "जन उपयोगी जानकारी"
         else -> categoryId.replace("_", " ")
     }
 
@@ -1433,6 +1437,7 @@ shareButton.setOnClickListener {
     "vacancy" -> "💼"
     "result" -> "🏆"
     "admit_card" -> "🎫"
+    "jan_upyogi" -> "🌟"
     else -> "📱"
 }
 
