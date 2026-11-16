@@ -7767,7 +7767,8 @@ private fun showCommonPostCreator(
     "नोटिस और अपडेट" to "notice",
     "महत्वपूर्ण जानकारी" to "important_information",
     "अध्ययन सामग्री" to "study_material",
-    "करियर गाइड और उपयोगी टूल्स" to "career_guide"
+    "करियर गाइड और उपयोगी टूल्स" to "career_guide",
+    "🌟 जन उपयोगी जानकारी" to "jan_upyogi"
 )
 
         val box = LinearLayout(this).apply {
@@ -7813,7 +7814,8 @@ val subcategoryCategories = listOf(
     "admit_card",
         "study_material",
     "career_guide",
-    "important_information"
+    "important_information",
+    "jan_upyogi"
 )
 
 val subcategoryItems = mutableMapOf<String, MutableList<CategorySubcategory>>()
@@ -7930,7 +7932,8 @@ val categoryLabels = mapOf(
     "admit_card" to "🎫 Admit Card",
     "study_material" to "📚 अध्ययन सामग्री",
     "career_guide" to "🎯 करियर गाइड",
-    "important_information" to "📌 महत्वपूर्ण सूचना"
+    "important_information" to "📌 महत्वपूर्ण सूचना",
+    "jan_upyogi" to "🌟 जन उपयोगी जानकारी"
 )
 
 val subcategoryLabelViews = mutableMapOf<String, TextView>()
