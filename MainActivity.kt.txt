@@ -580,6 +580,24 @@ findViewById<androidx.recyclerview.widget.RecyclerView>(
             )
         }
 
+        // Jan Upyogi Information Card
+        findViewById<View>(
+            R.id.janUpyogiButtonContainer
+        ).setOnClickListener {
+
+            openHomeCategory(
+                HomeCategory(
+                    id = "jan_upyogi",
+                    name = "जन उपयोगी जानकारी",
+                    icon = "🌟",
+                    url = "",
+                    pageId = "",
+                    position = 10L
+                )
+            )
+        }
+
+
         // Home User Account Menu — Login, Profile and Logout
 findViewById<View>(
     R.id.loginButton
