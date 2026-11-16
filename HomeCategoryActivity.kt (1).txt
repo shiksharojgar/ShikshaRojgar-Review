@@ -1088,7 +1088,8 @@ val unreadCategoryIds = setOf(
     "admit_card",
     "study_material",
     "career",
-    "career_guide"
+    "career_guide",
+"jan_upyogi"
 )
 
 val normalizedCategoryId = categoryId.trim().lowercase()
