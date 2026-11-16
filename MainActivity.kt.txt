@@ -2826,16 +2826,18 @@ private fun openHomeSubCategory(
     sub: HomeSubCategory
 ) {
 
-    if (sub.url.isBlank()) {
+    if (
+    sub.url.isBlank() &&
+    sub.pageType.lowercase() != "app page"
+) {
+    Toast.makeText(
+        this,
+        "${sub.name} का link अभी उपलब्ध नहीं है",
+        Toast.LENGTH_SHORT
+    ).show()
 
-        Toast.makeText(
-            this,
-            "${sub.name} का link अभी उपलब्ध नहीं है",
-            Toast.LENGTH_SHORT
-        ).show()
-
-        return
-    }
+    return
+}
 
 
     when (
