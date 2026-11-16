@@ -3778,13 +3778,15 @@ listOf(
     "📢 Notice / Update" to "notice",
     "📌 Important Information" to "important_information",
     "📖 Study Material / Syllabus" to "study_material",
-    "📚 Career Guide / Useful Tools" to "career_guide"
+    "📚 Career Guide / Useful Tools" to "career_guide",
+    "🌟 जन उपयोगी जानकारी" to "jan_upyogi"
 ).forEach { (label, categoryKey) ->
 
     val borderColor = when (categoryKey) {
         "notice" -> Color.rgb(25, 118, 210)
         "important_information" -> Color.rgb(0, 150, 136)
         "study_material" -> Color.rgb(123, 104, 238)
+"jan_upyogi" -> Color.rgb(33, 150, 243)
         else -> Color.rgb(230, 126, 34)
     }
 
