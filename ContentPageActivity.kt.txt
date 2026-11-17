@@ -710,9 +710,17 @@ loadingDialog.dismiss()
     
 
         
-        db.collection("category_posts")
-            .whereEqualTo("category", categoryKey)
-            .get()
+        val postQuery = db.collection("category_posts")
+    .whereEqualTo(
+        "category",
+        if (categoryKey == "jan_upyogi") {
+            "home_subcategory"
+        } else {
+            categoryKey
+        }
+    )
+
+postQuery.get()
             .addOnSuccessListener { snapshot ->
 
                 val requestedSubCategoryId =
