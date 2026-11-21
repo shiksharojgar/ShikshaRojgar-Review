@@ -383,6 +383,16 @@ private var allVacancyPosts: List<Post> = emptyList()
         )
 
         setContentView(R.layout.activity_main)
+// GROUP और JAN UPYOGI के अलग Unread Badges
+addCategoryUnreadBadge(
+    findViewById(R.id.groupButtonContainer),
+    "group"
+)
+
+addCategoryUnreadBadge(
+    findViewById(R.id.janUpyogiButtonContainer),
+    "jan_upyogi"
+)
         findViewById<android.widget.Button>(R.id.homeSliderPrevious)
     .setOnClickListener {
         if (homeCarouselUrls.isNotEmpty()) {
@@ -1375,6 +1385,98 @@ private fun updateImportantInfoUnreadCount() {
         }
 }
 
+// GROUP UNREAD COUNT
+private fun updateGroupUnreadCount() {
+
+    val prefs = getSharedPreferences(
+        "sr_notifications",
+        MODE_PRIVATE
+    )
+
+    val lastSeen = prefs.getLong(
+        "group_last_seen_at",
+        0L
+    )
+
+    FirebaseFirestore.getInstance()
+        .collection("group_posts")
+        .whereEqualTo("status", "approved")
+        .get()
+        .addOnSuccessListener { snapshot ->
+
+            val now = System.currentTimeMillis()
+
+            val count = snapshot.documents.count { doc ->
+
+                val createdAt = doc.getTimestamp("createdAt")
+                    ?.toDate()?.time ?: 0L
+
+                val expiresAt = doc.getTimestamp("expiresAt")
+                    ?.toDate()?.time ?: 0L
+
+                createdAt > lastSeen &&
+                    expiresAt > now
+            }
+
+            prefs.edit()
+                .putInt("group_bottom_unread", count)
+                .apply()
+
+            categoryUnreadBadges["group"]?.let { badge ->
+                if (count > 0) {
+                    badge.text =
+                        if (count > 99) "99+" else count.toString()
+                    badge.visibility = View.VISIBLE
+                } else {
+                    badge.visibility = View.GONE
+                }
+            }
+        }
+}
+
+// JAN UPYOGI INFORMATION UNREAD COUNT
+private fun updateJanUpyogiUnreadCount() {
+
+    val prefs = getSharedPreferences(
+        "sr_notifications",
+        MODE_PRIVATE
+    )
+
+    val lastSeen = prefs.getLong(
+        "category_jan_upyogi_last_seen_at",
+        0L
+    )
+
+    FirebaseFirestore.getInstance()
+        .collection("category_posts")
+        .whereEqualTo("category", "jan_upyogi")
+        .get()
+        .addOnSuccessListener { snapshot ->
+
+            val count = snapshot.documents.count { doc ->
+
+                (doc.getBoolean("enabled") ?: true) &&
+                (doc.getLong("createdAt") ?: 0L) > lastSeen
+            }
+
+            prefs.edit()
+                .putInt(
+                    "category_jan_upyogi_bottom_unread",
+                    count
+                )
+                .apply()
+
+            categoryUnreadBadges["jan_upyogi"]?.let { badge ->
+                if (count > 0) {
+                    badge.text =
+                        if (count > 99) "99+" else count.toString()
+                    badge.visibility = View.VISIBLE
+                } else {
+                    badge.visibility = View.GONE
+                }
+            }
+        }
+}
 // सभी 8 कैटेगरी की Unread पोस्ट गिनें।
 private fun updateCategoryUnreadCounts() {
 
@@ -1460,6 +1562,8 @@ firestore.collection("category_posts")
         updateNoticeUnreadCount()
                 updateImportantInfoUnreadCount()
 updateCategoryUnreadCounts()
+updateGroupUnreadCount()
+updateJanUpyogiUnreadCount()
                 
 floatingNoticeHandler.removeCallbacks(
     floatingNoticeRunnable
