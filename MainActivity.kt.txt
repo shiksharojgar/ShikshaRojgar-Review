@@ -1461,7 +1461,7 @@ private fun updateJanUpyogiUnreadCount() {
 
             prefs.edit()
                 .putInt(
-                    "category_jan_upyogi_bottom_unread",
+                    "jan_upyogi_bottom_unread",
                     count
                 )
                 .apply()
