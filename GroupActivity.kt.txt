@@ -43,6 +43,7 @@ class GroupActivity : AppCompatActivity() {
     private lateinit var postsContainer: LinearLayout
 private lateinit var postsScrollView: ScrollView
 private var initialPostsPositioned = false
+private var firstUnreadCardView: View? = null
     private lateinit var pendingContainer: LinearLayout
 private lateinit var memberCountView: TextView
     
@@ -799,54 +800,125 @@ groupImagePreview = imagePreview
 }
     
     private fun loadApprovedPosts() {
-        if (feedStarted) return
+    if (feedStarted) return
 
-        feedStarted = true
-        val loadingDialog =
-    CommonPageUi.showFileLoadingDialog(
-        this,
-        "⏳ कृपया प्रतीक्षा करें... ग्रुप पोस्ट लोड हो रही हैं।"
-    )
+    feedStarted = true
 
-        GroupRepository.approvedPosts(
-            onResult = { posts ->
-               loadingDialog.dismiss() 
-                postsContainer.removeAllViews()
-                statusView.text = "मंजूर पोस्ट: ${posts.size}"
+    val loadingDialog =
+        CommonPageUi.showFileLoadingDialog(
+            this,
+            "⏳ कृपया प्रतीक्षा करें... ग्रुप पोस्ट लोड हो रही हैं।"
+        )
 
-                if (posts.isEmpty()) {
-                    addMessage(
-                        postsContainer,
-                        "अभी कोई मंजूर पोस्ट नहीं है।"
-                    )
-                } else {
-                    posts.forEach { post ->
-if (!initialPostsPositioned) {
-    postsScrollView.post {
-        postsScrollView.post {
-            val contentHeight =
-                postsScrollView.getChildAt(0)?.height ?: 0
+    GroupRepository.approvedPosts(
+        onResult = { posts ->
 
-            postsScrollView.scrollTo(0, contentHeight)
-            initialPostsPositioned = true
-        }
-    }
-}
-                        addPostCard(postsContainer, post, false)
-                    }
-                }
-            },
-            onError = {
-                loadingDialog.dismiss()
-                statusView.text = "पोस्ट लोड नहीं हो सकीं।"
+            loadingDialog.dismiss()
+            postsContainer.removeAllViews()
+            firstUnreadCardView = null
+
+            statusView.text = "मंजूर पोस्ट: ${posts.size}"
+
+            if (posts.isEmpty()) {
 
                 addMessage(
                     postsContainer,
-                        "नेटवर्क या अन्य समस्या हो सकती है।"
+                    "अभी कोई मंजूर पोस्ट नहीं है।"
                 )
+
+            } else {
+
+                val prefs = getSharedPreferences(
+                    "sr_notifications",
+                    MODE_PRIVATE
+                )
+
+                val lastSeen = prefs.getLong(
+                    "group_last_seen_at",
+                    0L
+                )
+
+                val firstUnreadPost = if (!initialPostsPositioned) {
+                    posts.firstOrNull {
+                        it.createdAt > lastSeen
+                    }
+                } else {
+                    null
+                }
+
+                posts.forEach { post ->
+
+                    val isFirstUnread =
+                        firstUnreadPost?.id == post.id
+
+                    addPostCard(
+                        postsContainer,
+                        post,
+                        false,
+                        isFirstUnread
+                    )
+                }
+
+                if (!initialPostsPositioned) {
+
+                    postsScrollView.post {
+
+                        postsScrollView.post {
+
+                            if (firstUnreadCardView != null) {
+
+                                val targetTop =
+                                    postsContainer.top +
+                                    (firstUnreadCardView?.top ?: 0)
+
+                                postsScrollView.smoothScrollTo(
+                                    0,
+                                    targetTop
+                                )
+
+                            } else {
+
+                                val contentHeight =
+                                    postsScrollView.getChildAt(0)?.height ?: 0
+
+                                postsScrollView.scrollTo(
+                                    0,
+                                    contentHeight
+                                )
+                            }
+
+                            val newestTime =
+                                posts.maxOfOrNull {
+                                    it.createdAt
+                                } ?: 0L
+
+                            if (newestTime > lastSeen) {
+                                prefs.edit()
+                                    .putLong(
+                                        "group_last_seen_at",
+                                        newestTime
+                                    )
+                                    .apply()
+                            }
+
+                            initialPostsPositioned = true
+                        }
+                    }
+                }
             }
-        )
-    }
+        },
+
+        onError = {
+            loadingDialog.dismiss()
+            statusView.text = "पोस्ट लोड नहीं हो सकीं।"
+
+            addMessage(
+                postsContainer,
+                "नेटवर्क या अन्य समस्या हो सकती है।"
+            )
+        }
+    )
+}
 
     private fun loadMyPendingPosts() {
         val user = auth.currentUser ?: return
@@ -899,10 +971,11 @@ imageUrl = document.getString("imageUrl").orEmpty(),
     }
 
     private fun addPostCard(
-        container: LinearLayout,
-        post: GroupPost,
-        isPending: Boolean
-    ) {
+    container: LinearLayout,
+    post: GroupPost,
+    isPending: Boolean,
+    isFirstUnread: Boolean = false
+) {
         val card = LinearLayout(this).apply {
     orientation = LinearLayout.VERTICAL
     setPadding(dp(14), dp(12), dp(14), dp(12))
@@ -921,6 +994,19 @@ imageUrl = document.getString("imageUrl").orEmpty(),
         val greenLine = View(this).apply {
             setBackgroundColor(Color.rgb(22, 131, 74))
         }
+// पहली अनरीड पोस्ट का मार्कर
+if (isFirstUnread) {
+
+    val unreadLabel = TextView(this).apply {
+        text = "🔴 पहली अनरीड पोस्ट"
+        textSize = 13f
+        typeface = Typeface.DEFAULT_BOLD
+        setTextColor(Color.RED)
+        setPadding(0, 0, 0, dp(10))
+    }
+
+    card.addView(unreadLabel)
+}
 
         card.addView(
             greenLine,
@@ -1334,6 +1420,9 @@ linksClickable = true
                 bottomMargin = dp(12)
             }
         )
+if (isFirstUnread) {
+    firstUnreadCardView = card
+}
     }
 
     private fun confirmDelete(post: GroupPost) {
