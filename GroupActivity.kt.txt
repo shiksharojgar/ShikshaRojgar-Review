@@ -20,6 +20,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import android.view.MotionEvent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -43,6 +44,8 @@ class GroupActivity : AppCompatActivity() {
     private lateinit var postsContainer: LinearLayout
 private lateinit var postsScrollView: ScrollView
 private var initialPostsPositioned = false
+private var latestApprovedPostTime = 0L
+private var userScrolledPosts = false
 private var firstUnreadCardView: View? = null
     private lateinit var pendingContainer: LinearLayout
 private lateinit var memberCountView: TextView
@@ -426,7 +429,27 @@ root.addView(
         root.addView(statusView)
 
         postsScrollView = ScrollView(this)
+postsScrollView.setOnTouchListener { _, event ->
+    if (event.action == MotionEvent.ACTION_MOVE) {
+        userScrolledPosts = true
+    }
 
+    if (event.action == MotionEvent.ACTION_UP) {
+        postsScrollView.post {
+            markGroupPostsSeenIfAtBottom()
+        }
+    }
+
+    false
+}
+
+postsScrollView.setOnScrollChangeListener {
+        view, _, scrollY, _, _ ->
+
+    if (userScrolledPosts) {
+        markGroupPostsSeenIfAtBottom()
+    }
+}
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(12), dp(4), dp(12), dp(20))
@@ -887,19 +910,10 @@ groupImagePreview = imagePreview
                                 )
                             }
 
-                            val newestTime =
-                                posts.maxOfOrNull {
-                                    it.createdAt
-                                } ?: 0L
+                            latestApprovedPostTime =
+    posts.maxOfOrNull { it.createdAt } ?: 0L
 
-                            if (newestTime > lastSeen) {
-                                prefs.edit()
-                                    .putLong(
-                                        "group_last_seen_at",
-                                        newestTime
-                                    )
-                                    .apply()
-                            }
+initialPostsPositioned = true
 
                             initialPostsPositioned = true
                         }
@@ -919,7 +933,33 @@ groupImagePreview = imagePreview
         }
     )
 }
+private fun markGroupPostsSeenIfAtBottom() {
 
+    if (!userScrolledPosts) return
+    if (latestApprovedPostTime <= 0L) return
+
+    val contentView = postsScrollView.getChildAt(0) ?: return
+
+    val isAtBottom =
+        postsScrollView.scrollY + postsScrollView.height >=
+        contentView.height - dp(24)
+
+    if (isAtBottom) {
+
+        getSharedPreferences(
+            "sr_notifications",
+            MODE_PRIVATE
+        ).edit()
+            .putLong(
+                "group_last_seen_at",
+                latestApprovedPostTime
+            )
+            .apply()
+
+        latestApprovedPostTime = 0L
+        userScrolledPosts = false
+    }
+}
     private fun loadMyPendingPosts() {
         val user = auth.currentUser ?: return
 
