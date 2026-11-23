@@ -915,7 +915,7 @@ groupImagePreview = imagePreview
 
 initialPostsPositioned = true
 
-                            initialPostsPositioned = true
+                            
                         }
                     }
                 }
